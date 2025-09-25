@@ -602,28 +602,70 @@ client.on('interactionCreate', async (interaction) => {
                     break;
                     
                 case 'memoria':
-                    // Verificar cache primero
-                    const cachedMemory = cache.getStats('memory');
-                    if (cachedMemory) {
-                        await interaction.reply(cachedMemory);
-                    } else {
-                        const memoryStats = contextualMemory.getMemoryStats();
-                        const memoryInfo = `🧠 **Memoria Dr.Salitas** 📊
+                    try {
+                        // Verificar cache primero
+                        const cachedMemory = cache.getStats('memory');
+                        if (cachedMemory) {
+                            await interaction.reply(cachedMemory);
+                        } else {
+                            const memoryStats = contextualMemory.getMemoryStats();
+                            
+                            // Validar que tenemos datos válidos
+                            if (!memoryStats || typeof memoryStats !== 'object') {
+                                throw new Error('No se pudieron obtener las estadísticas de memoria');
+                            }
+                            
+                            // Sanitizar nombres de usuario para evitar problemas con caracteres especiales
+                            const sanitizedTopUsers = (memoryStats.topUsers || []).map((user, index) => {
+                                const sanitizedUsername = (user.username || 'Usuario desconocido')
+                                    .replace(/[*_`~|]/g, '') // Remover caracteres de markdown
+                                    .substring(0, 50); // Limitar longitud
+                                
+                                return `${index + 1}. ${sanitizedUsername} - ${user.messages || 0} mensajes`;
+                            });
+                            
+                            const memoryInfo = `🧠 **Memoria Dr.Salitas** 📊
 
 **Estadísticas Generales:**
-👥 Usuarios conocidos: ${memoryStats.totalUsers}
-💬 Usuarios activos: ${memoryStats.activeUsers}
-📝 Total mensajes recordados: ${memoryStats.totalMessages}
+👥 Usuarios conocidos: ${memoryStats.totalUsers || 0}
+💬 Usuarios activos: ${memoryStats.activeUsers || 0}
+📝 Total mensajes recordados: ${memoryStats.totalMessages || 0}
 
 **Top Usuarios más Activos:**
-${memoryStats.topUsers.map((user, index) => 
-    `${index + 1}. **${user.username}** - ${user.messages} mensajes`
-).join('\n')}
+${sanitizedTopUsers.length > 0 ? sanitizedTopUsers.join('\n') : 'No hay usuarios registrados aún'}
 
 ¡Dr.Salitas nunca olvida a sus amigos culiaos! 🐕🧠`;
+                            
+                            // Verificar que el mensaje no esté vacío y no sea demasiado largo
+                            if (!memoryInfo.trim()) {
+                                throw new Error('El mensaje de memoria está vacío');
+                            }
+                            
+                            if (memoryInfo.length > 2000) {
+                                throw new Error('El mensaje de memoria es demasiado largo');
+                            }
+                            
+                            cache.setStats('memory', memoryInfo, 600); // Cache por 10 minutos
+                            await interaction.reply(memoryInfo);
+                        }
+                    } catch (error) {
+                        logger.error('Error en comando memoria', {
+                            command: 'memoria',
+                            user: interaction.user.username,
+                            userId: interaction.user.id,
+                            guild: interaction.guild?.name,
+                            guildId: interaction.guild?.id,
+                            errorMessage: error.message,
+                            errorStack: error.stack,
+                            timestamp: new Date().toISOString(),
+                            originalError: error.toString()
+                        });
                         
-                        cache.setStats('memory', memoryInfo, 600); // Cache por 10 minutos
-                        await interaction.reply(memoryInfo);
+                        // Respuesta de fallback
+                        await interaction.reply({
+                            content: '🧠 **Error en Memoria Dr.Salitas** ❌\n\nNo pude acceder a mis recuerdos en este momento. ¡Pero sigo siendo el perrito más elegante! 🐕👔',
+                            flags: 64 // MessageFlags.Ephemeral
+                        });
                     }
                     break;
                     
