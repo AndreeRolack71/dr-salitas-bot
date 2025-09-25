@@ -1341,7 +1341,14 @@ client.on('messageCreate', async (message) => {
 
 // Manejo de errores
 client.on('error', (error) => {
-    logger.error('Error del cliente Discord', error);
+    logger.error('Error del cliente Discord', error, {
+        errorType: 'client_error',
+        errorName: error.name,
+        errorMessage: error.message,
+        errorCode: error.code,
+        timestamp: new Date().toISOString(),
+        stack: error.stack
+    });
 });
 
 process.on('unhandledRejection', (error) => {
