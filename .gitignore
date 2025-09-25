@@ -7,6 +7,9 @@ data/Chat*
 !data/.gitkeep
 !data/character-lore.js
 
+# Base de datos SQLite - contiene datos dinámicos del bot
+data/dr-salitas.db
+
 # Archivos de entorno y configuración sensible
 .env
 .env.local
