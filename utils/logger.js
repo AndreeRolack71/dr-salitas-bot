@@ -11,12 +11,20 @@ const customFormat = winston.format.combine(
         format: 'YYYY-MM-DD HH:mm:ss'
     }),
     winston.format.errors({ stack: true }),
-    winston.format.printf(({ timestamp, level, message, stack, ...meta }) => {
+    winston.format.printf((info) => {
+        const { timestamp, level, message, stack, ...meta } = info;
         let logMessage = `${timestamp} [${level.toUpperCase()}]: ${stack || message}`;
         
-        // Agregar metadatos si existen
-        if (Object.keys(meta).length > 0) {
-            logMessage += `\nMetadata: ${JSON.stringify(meta, null, 2)}`;
+        // Agregar metadatos si existen (excluyendo propiedades internas de winston)
+        const filteredMeta = Object.keys(meta).reduce((acc, key) => {
+            if (!['Symbol(level)', 'Symbol(message)', 'Symbol(splat)'].includes(key)) {
+                acc[key] = meta[key];
+            }
+            return acc;
+        }, {});
+        
+        if (Object.keys(filteredMeta).length > 0) {
+            logMessage += ` ${JSON.stringify(filteredMeta)}`;
         }
         
         return logMessage;
@@ -59,9 +67,23 @@ const logger = winston.createLogger({
         new winston.transports.Console({
             format: winston.format.combine(
                 winston.format.colorize(),
-                winston.format.simple(),
-                winston.format.printf(({ timestamp, level, message }) => {
-                    return `${timestamp} [${level}]: ${message}`;
+                winston.format.printf((info) => {
+                    const { timestamp, level, message, stack, ...meta } = info;
+                    let logMessage = `${timestamp} [${level}]: ${stack || message}`;
+                    
+                    // Agregar metadatos si existen (excluyendo propiedades internas de winston)
+                    const filteredMeta = Object.keys(meta).reduce((acc, key) => {
+                        if (!['Symbol(level)', 'Symbol(message)', 'Symbol(splat)'].includes(key)) {
+                            acc[key] = meta[key];
+                        }
+                        return acc;
+                    }, {});
+                    
+                    if (Object.keys(filteredMeta).length > 0) {
+                        logMessage += ` ${JSON.stringify(filteredMeta)}`;
+                    }
+                    
+                    return logMessage;
                 })
             )
         })
@@ -102,11 +124,17 @@ const botLogger = {
     },
     
     // Errores
-    error: (message, error = null, meta = {}) => {
-        if (error) {
-            logger.error(message, { error: error.stack || error, ...meta });
+    error: (message, metaOrError = {}) => {
+        // Si el segundo parámetro es un Error object, tratarlo como error
+        if (metaOrError instanceof Error) {
+            logger.error(message, { 
+                error: metaOrError.message,
+                stack: metaOrError.stack,
+                name: metaOrError.name
+            });
         } else {
-            logger.error(message, meta);
+            // Si no es un Error, tratarlo como metadatos
+            logger.error(message, metaOrError);
         }
     },
     

@@ -831,7 +831,7 @@ ${topicList}
             commandSuccess = false;
             errorMessage = error.message;
             
-            logger.error('Error en comando slash', error, {
+            logger.error('Error en comando slash', {
                 command: interaction.commandName,
                 user: interaction.user.username,
                 userId: interaction.user.id,
@@ -839,7 +839,8 @@ ${topicList}
                 guildId: interaction.guild?.id,
                 errorMessage: error.message,
                 errorStack: error.stack,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                originalError: error.toString()
             });
             
             // Intentar responder al usuario si la interacción no ha sido respondida
@@ -855,13 +856,14 @@ ${topicList}
                     });
                 }
             } catch (replyError) {
-                logger.error('Error del cliente Discord', replyError, {
+                logger.error('Error del cliente Discord', {
                     originalError: error.message,
                     originalStack: error.stack,
                     replyErrorMessage: replyError.message,
                     replyErrorStack: replyError.stack,
                     command: interaction.commandName,
-                    user: interaction.user.username
+                    user: interaction.user.username,
+                    timestamp: new Date().toISOString()
                 });
             }
         } finally {
@@ -1341,13 +1343,14 @@ client.on('messageCreate', async (message) => {
 
 // Manejo de errores
 client.on('error', (error) => {
-    logger.error('Error del cliente Discord', error, {
+    logger.error('Error del cliente Discord', {
         errorType: 'client_error',
         errorName: error.name,
         errorMessage: error.message,
         errorCode: error.code,
         timestamp: new Date().toISOString(),
-        stack: error.stack
+        stack: error.stack,
+        originalError: error.toString()
     });
 });
 
