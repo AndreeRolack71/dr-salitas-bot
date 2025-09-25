@@ -603,12 +603,33 @@ client.on('interactionCreate', async (interaction) => {
                     
                 case 'memoria':
                     try {
+                        logger.info('DEBUG: Iniciando comando memoria', {
+                            command: 'memoria',
+                            user: interaction.user.username,
+                            userId: interaction.user.id,
+                            timestamp: new Date().toISOString()
+                        });
+                        
                         // Verificar cache primero
                         const cachedMemory = cache.getStats('memory');
+                        logger.info('DEBUG: Cache verificado', {
+                            hasCachedMemory: !!cachedMemory,
+                            cachedLength: cachedMemory ? cachedMemory.length : 0
+                        });
+                        
                         if (cachedMemory) {
+                            logger.info('DEBUG: Usando memoria cacheada');
                             await interaction.reply(cachedMemory);
                         } else {
+                            logger.info('DEBUG: Obteniendo estadísticas de memoria');
                             const memoryStats = contextualMemory.getMemoryStats();
+                            
+                            logger.info('DEBUG: Estadísticas obtenidas', {
+                                memoryStats: JSON.stringify(memoryStats, null, 2),
+                                hasMemoryStats: !!memoryStats,
+                                memoryStatsType: typeof memoryStats,
+                                topUsersLength: memoryStats?.topUsers?.length || 0
+                            });
                             
                             // Validar que tenemos datos válidos
                             if (!memoryStats || typeof memoryStats !== 'object') {
@@ -624,6 +645,11 @@ client.on('interactionCreate', async (interaction) => {
                                 return `${index + 1}. ${sanitizedUsername} - ${user.messages || 0} mensajes`;
                             });
                             
+                            logger.info('DEBUG: Usuarios sanitizados', {
+                                sanitizedTopUsers: sanitizedTopUsers,
+                                sanitizedLength: sanitizedTopUsers.length
+                            });
+                            
                             const memoryInfo = `🧠 **Memoria Dr.Salitas** 📊
 
 **Estadísticas Generales:**
@@ -636,6 +662,13 @@ ${sanitizedTopUsers.length > 0 ? sanitizedTopUsers.join('\n') : 'No hay usuarios
 
 ¡Dr.Salitas nunca olvida a sus amigos culiaos! 🐕🧠`;
                             
+                            logger.info('DEBUG: Mensaje construido', {
+                                memoryInfoLength: memoryInfo.length,
+                                memoryInfoTrimmed: memoryInfo.trim().length,
+                                memoryInfoPreview: memoryInfo.substring(0, 200) + '...',
+                                isEmpty: !memoryInfo.trim()
+                            });
+                            
                             // Verificar que el mensaje no esté vacío y no sea demasiado largo
                             if (!memoryInfo.trim()) {
                                 throw new Error('El mensaje de memoria está vacío');
@@ -646,7 +679,12 @@ ${sanitizedTopUsers.length > 0 ? sanitizedTopUsers.join('\n') : 'No hay usuarios
                             }
                             
                             cache.setStats('memory', memoryInfo, 600); // Cache por 10 minutos
+                            logger.info('DEBUG: Enviando respuesta', {
+                                messageLength: memoryInfo.length
+                            });
+                            
                             await interaction.reply(memoryInfo);
+                            logger.info('DEBUG: Respuesta enviada exitosamente');
                         }
                     } catch (error) {
                         logger.error('Error en comando memoria', {
@@ -662,10 +700,17 @@ ${sanitizedTopUsers.length > 0 ? sanitizedTopUsers.join('\n') : 'No hay usuarios
                         });
                         
                         // Respuesta de fallback
-                        await interaction.reply({
-                            content: '🧠 **Error en Memoria Dr.Salitas** ❌\n\nNo pude acceder a mis recuerdos en este momento. ¡Pero sigo siendo el perrito más elegante! 🐕👔',
-                            flags: 64 // MessageFlags.Ephemeral
-                        });
+                        try {
+                            await interaction.reply({
+                                content: '🧠 **Error en Memoria Dr.Salitas** ❌\n\nNo pude acceder a mis recuerdos en este momento. ¡Pero sigo siendo el perrito más elegante! 🐕👔',
+                                flags: 64 // MessageFlags.Ephemeral
+                            });
+                        } catch (replyError) {
+                            logger.error('Error enviando respuesta de fallback', {
+                                replyError: replyError.message,
+                                replyStack: replyError.stack
+                            });
+                        }
                     }
                     break;
                     
