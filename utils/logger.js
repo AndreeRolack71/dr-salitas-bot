@@ -11,8 +11,15 @@ const customFormat = winston.format.combine(
         format: 'YYYY-MM-DD HH:mm:ss'
     }),
     winston.format.errors({ stack: true }),
-    winston.format.printf(({ timestamp, level, message, stack }) => {
-        return `${timestamp} [${level.toUpperCase()}]: ${stack || message}`;
+    winston.format.printf(({ timestamp, level, message, stack, ...meta }) => {
+        let logMessage = `${timestamp} [${level.toUpperCase()}]: ${stack || message}`;
+        
+        // Agregar metadatos si existen
+        if (Object.keys(meta).length > 0) {
+            logMessage += `\nMetadata: ${JSON.stringify(meta, null, 2)}`;
+        }
+        
+        return logMessage;
     })
 );
 
