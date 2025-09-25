@@ -614,13 +614,13 @@ client.on('interactionCreate', async (interaction) => {
                         const cachedMemory = cache.getStats('memory');
                         logger.info('DEBUG: Cache verificado', {
                             hasCachedMemory: !!cachedMemory,
-                            cachedLength: cachedMemory ? cachedMemory.length : 0,
+                            cachedLength: cachedMemory ? (typeof cachedMemory === 'string' ? cachedMemory.length : 'N/A - not string') : 0,
                             cachedType: typeof cachedMemory,
-                            cachedValue: cachedMemory ? cachedMemory.substring(0, 100) + '...' : 'null/undefined'
+                            cachedValue: cachedMemory ? (typeof cachedMemory === 'string' ? cachedMemory.substring(0, 100) + '...' : JSON.stringify(cachedMemory).substring(0, 100) + '...') : 'null/undefined'
                         });
                         
                         // VALIDAR que el cache no esté vacío antes de usarlo
-                        if (cachedMemory && cachedMemory.trim() && cachedMemory.length > 0) {
+                        if (cachedMemory && typeof cachedMemory === 'string' && cachedMemory.trim() && cachedMemory.length > 0) {
                             logger.info('DEBUG: Usando memoria cacheada válida');
                             await interaction.reply(cachedMemory);
                         } else {
