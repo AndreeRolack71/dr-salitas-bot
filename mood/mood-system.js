@@ -8,8 +8,10 @@ class MoodSystem {
 
     // Obtener el estado de ánimo actual basado en la hora
     getCurrentMood() {
+        // Obtener hora actual en zona horaria de Chile
         const now = new Date();
-        const hour = now.getHours();
+        const chileTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Santiago"}));
+        const hour = chileTime.getHours();
         
         // Si hay un override activo, usarlo
         if (this.moodOverride) {
@@ -151,10 +153,12 @@ class MoodSystem {
     getSystemStatus() {
         const currentMood = this.getCurrentMood();
         const moodInfo = this.getMoodInfo();
+        // Usar la misma lógica de zona horaria que getCurrentMood
         const now = new Date();
+        const chileTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Santiago"}));
         
         return {
-            currentTime: now.toLocaleString('es-CL'),
+            currentTime: chileTime.toLocaleString('es-CL', { timeZone: 'America/Santiago' }),
             currentMood: currentMood,
             moodName: moodInfo.name,
             moodEmoji: moodInfo.emoji,
