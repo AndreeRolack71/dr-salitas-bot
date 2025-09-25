@@ -1383,7 +1383,7 @@ function setupScheduledMessages() {
     let generalChannel = null;
     
     // Buscar canal general cuando el bot esté listo
-    client.once('ready', () => {
+    client.once('clientReady', () => {
         // Buscar un canal de texto general (puedes ajustar el nombre según tu servidor)
         const guild = client.guilds.cache.first(); // Toma el primer servidor
         if (guild) {
