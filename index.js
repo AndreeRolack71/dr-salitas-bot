@@ -300,11 +300,11 @@ ${moodIntro}
 
 🔥 **RONDA 1:**
 💥 ${fighter1.name} ${action1}!
-💬 *"${fighter1.quotes[Math.floor(Math.random() * fighter1.quotes.length)]}"*
+💬 *"${fighter1.quotes && fighter1.quotes.length > 0 ? fighter1.quotes[Math.floor(Math.random() * fighter1.quotes.length)] : '¡Prepárate para la batalla cósmica!'}"*
 
 ⚡ **RONDA 2:**
 💥 ${fighter2.name} ${action2}!
-💬 *"${fighter2.quotes[Math.floor(Math.random() * fighter2.quotes.length)]}"*
+💬 *"${fighter2.quotes && fighter2.quotes.length > 0 ? fighter2.quotes[Math.floor(Math.random() * fighter2.quotes.length)] : '¡El poder del universo está conmigo!'}"*
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -1147,13 +1147,40 @@ client.on('messageCreate', async (message) => {
     }
 
     // Respuestas inteligentes para palabras clave con probabilidades variables (reducidas)
-    const highPriorityKeywords = ['pene', 'wea', 'culiao', 'conchetumare', 'ctm']; // 25% probabilidad
-    const mediumPriorityKeywords = ['asco', 'cochino', 'bizarro', 'ordinario', 'pico', 'raja', 'maricon', 'aweonao', 'bastardo', 'gil', 'sapo', 'tonto']; // 15% probabilidad
-    const lowPriorityKeywords = ['elegante', 'terno', 'perro', 'doctor', 'ano', 'culo', 'pichula', 'flaite', 'ted', 'pajero', 'estúpido', 'reculiao']; // 10% probabilidad
+    const highPriorityKeywords = ['pene', 'wea', 'culiao', 'conchetumare', 'ctm', 'moco']; // 25% probabilidad
+    const mediumPriorityKeywords = ['asco', 'cochino', 'bizarro', 'ordinario', 'pico', 'raja', 'maricon', 'aweonao', 'bastardo', 'gil', 'sapo', 'tonto', 'dormir', 'sueño', 'insomnio', 'problemas']; // 15% probabilidad
+    const lowPriorityKeywords = ['elegante', 'terno', 'perro', 'doctor', 'ano', 'culo', 'pichula', 'flaite', 'ted', 'pajero', 'estúpido', 'reculiao', 'cansado', 'aburrido']; // 10% probabilidad
+    
+    // Palabras clave especiales que siempre responden
+    const alwaysRespondKeywords = ['moco', 'dr salitas', 'dr.salitas', 'salitas'];
+    
+    // Verificar palabras clave que siempre responden
+    if (alwaysRespondKeywords.some(keyword => messageContent.includes(keyword))) {
+        // Crear contexto para respuestas más inteligentes
+        const context = {
+            timeOfDay: getTimeOfDay(),
+            isKnownUser: contextualMemory.hasUserHistory(message.author.id),
+            excitement: messageContent.includes('!') || messageContent.includes('genial') || messageContent.includes('bacán'),
+            confusion: messageContent.includes('?') || messageContent.includes('qué') || messageContent.includes('como')
+        };
+        
+        // Verificar cache para respuesta especial
+        const cacheKey = `always_respond_${message.author.id}_${message.content.slice(0, 40)}`;
+        const cachedSpecialResponse = cache.getPersonalityResponse(cacheKey);
+        
+        if (cachedSpecialResponse) {
+            message.reply(cachedSpecialResponse);
+        } else {
+            const smartResponse = drSalitas.getSmartResponse(message.content, context);
+            cache.setPersonalityResponse(cacheKey, smartResponse, 120); // Cache por 2 minutos
+            message.reply(smartResponse);
+        }
+        return;
+    }
     
     // Verificar palabras clave de alta prioridad
     if (highPriorityKeywords.some(keyword => messageContent.includes(keyword))) {
-        if (Math.random() < 0.2) { // 20% probabilidad
+        if (Math.random() < 0.15) { // Reducido de 20% a 15%
             // Crear contexto para respuestas más inteligentes
             const context = {
                 timeOfDay: getTimeOfDay(),
@@ -1179,7 +1206,7 @@ client.on('messageCreate', async (message) => {
     
     // Verificar palabras clave de prioridad media
     if (mediumPriorityKeywords.some(keyword => messageContent.includes(keyword))) {
-        if (Math.random() < 0.12) { // 12% probabilidad
+        if (Math.random() < 0.08) { // Reducido de 12% a 8%
             // Crear contexto para respuestas más inteligentes
             const context = {
                 timeOfDay: getTimeOfDay(),
@@ -1205,7 +1232,7 @@ client.on('messageCreate', async (message) => {
     
     // Verificar palabras clave de baja prioridad
     if (lowPriorityKeywords.some(keyword => messageContent.includes(keyword))) {
-        if (Math.random() < 0.08) { // 8% probabilidad
+        if (Math.random() < 0.05) { // Reducido de 8% a 5%
             // Crear contexto para respuestas más inteligentes
             const context = {
                 timeOfDay: getTimeOfDay(),
@@ -1232,7 +1259,7 @@ client.on('messageCreate', async (message) => {
     // Sistema de saludos y despedidas espontáneos (nueva funcionalidad)
     if (drSalitas.isGreeting(messageContent) || drSalitas.isFarewell(messageContent)) {
         // Probabilidad más alta para saludos y despedidas directos
-        if (Math.random() < 0.35) { // 35% probabilidad para saludos/despedidas
+        if (Math.random() < 0.25) { // Reducido de 35% a 25%
             const context = {
                 timeOfDay: getTimeOfDay(),
                 isKnownUser: contextualMemory.hasUserHistory(message.author.id),
@@ -1249,7 +1276,7 @@ client.on('messageCreate', async (message) => {
     }
 
     // Sistema de saludos espontáneos sin ser mencionado (probabilidad baja pero presente)
-    if (!message.mentions.has(client.user) && Math.random() < 0.05) { // 5% probabilidad base para espontaneidad
+    if (!message.mentions.has(client.user) && Math.random() < 0.03) { // Reducido de 5% a 3%
         const context = {
             timeOfDay: getTimeOfDay(),
             isKnownUser: contextualMemory.hasUserHistory(message.author.id),

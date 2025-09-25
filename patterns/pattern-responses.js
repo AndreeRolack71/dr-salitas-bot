@@ -250,10 +250,30 @@ class PatternResponses {
     // Obtener múltiples respuestas para spam controlado
     getMultipleResponses(analysisResult, username, count = 2) {
         const responses = [];
+        const usedResponses = new Set();
+        let attempts = 0;
+        const maxAttempts = count * 5; // Máximo 5 intentos por respuesta
         
-        for (let i = 0; i < count; i++) {
+        while (responses.length < count && attempts < maxAttempts) {
             const response = this.getResponse(analysisResult, username);
-            responses.push(response);
+            
+            // Verificar que la respuesta no sea duplicada
+            if (!usedResponses.has(response)) {
+                responses.push(response);
+                usedResponses.add(response);
+            }
+            
+            attempts++;
+        }
+        
+        // Si no pudimos generar suficientes respuestas únicas, llenar con respuestas caóticas
+        while (responses.length < count) {
+            const chaotic = this.getRandomResponse(this.responses.chaotic);
+            const personalizedChaotic = this.personalizeResponse(chaotic, username, false);
+            if (!usedResponses.has(personalizedChaotic)) {
+                responses.push(personalizedChaotic);
+                usedResponses.add(personalizedChaotic);
+            }
         }
         
         return responses;
@@ -263,13 +283,13 @@ class PatternResponses {
     shouldSpamResponses(analysisResult) {
         const { userState, isTriggered } = analysisResult;
         
-        // Spam si el usuario está muy triggeado
+        // Spam si el usuario está muy triggeado (reducido)
         if (isTriggered && userState.intensity >= 8) {
-            return Math.random() < 0.4; // 40% chance
+            return Math.random() < 0.25; // Reducido de 40% a 25%
         }
         
-        // Spam ocasional para diversión
-        return Math.random() < 0.1; // 10% chance
+        // Spam ocasional para diversión (reducido)
+        return Math.random() < 0.05; // Reducido de 10% a 5%
     }
 
     // Obtener respuesta especial para situaciones únicas

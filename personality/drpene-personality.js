@@ -245,6 +245,19 @@ class DrPenePersonality {
         return this.getRandomResponse(responses);
     }
 
+    // Respuesta para problemas de sueño
+    getSleepResponse() {
+        const responses = [
+            "¿No podís dormir culiao? Dr.Salitas tampoco duerme, anda ladrando toda la noche 🐕🌙",
+            "¡Insomnio ql! Contá ovejas o mejor contá penes, es más entretenido 🍆💤",
+            "¿Problemas pa dormir? Tomáte una leche tibia con moco, funciona siempre 🥛💚",
+            "¡Weon desvelado! Dr.Salitas recomienda contar chistes hasta quedarte dormido 😴🎭",
+            "¿Sueño culiao? Mejor quedate despierto y conversa conmigo po 🤵‍♂️⭐",
+            "¡Insomnio bastardo! Relajáte, respirá hondo y pensá en cosas bizarras 🧘‍♂️🌀"
+        ];
+        return this.getRandomResponse(responses);
+    }
+
     isGreeting(message) {
         const greetings = [
             // Saludos tradicionales
@@ -308,6 +321,19 @@ class DrPenePersonality {
     // Respuesta general inteligente
     getSmartResponse(message, context = {}) {
         const responses = this.getContextualResponses();
+        const lowerMessage = message.toLowerCase();
+        
+        // Respuestas específicas para moco
+        if (lowerMessage.includes('moco')) {
+            return this.getMocoResponse();
+        }
+        
+        // Respuestas específicas para problemas de sueño
+        if (lowerMessage.includes('dormir') || lowerMessage.includes('sueño') || 
+            lowerMessage.includes('insomnio') || lowerMessage.includes('problemas para dormir') ||
+            lowerMessage.includes('no puedo dormir') || lowerMessage.includes('tengo problemas para dormir')) {
+            return this.getSleepResponse();
+        }
         
         if (this.isGreeting(message)) {
             // Seleccionar respuesta basada en el contexto temporal y emocional
@@ -372,8 +398,6 @@ class DrPenePersonality {
         }
         
         // Detectar emociones en el mensaje para respuestas automáticas
-        const lowerMessage = message.toLowerCase();
-        
         // Palabras que generan emoción
         if (lowerMessage.includes('genial') || lowerMessage.includes('bacán') || lowerMessage.includes('wena') || lowerMessage.includes('buena')) {
             return this.getRandomResponse(responses.excitement);
