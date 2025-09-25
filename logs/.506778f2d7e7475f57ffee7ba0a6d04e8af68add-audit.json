@@ -1,0 +1,15 @@
+{
+    "keep": {
+        "days": true,
+        "amount": 30
+    },
+    "auditLog": "C:\\Users\\emanu\\Desktop\\dr-salitas-bot\\logs\\.506778f2d7e7475f57ffee7ba0a6d04e8af68add-audit.json",
+    "files": [
+        {
+            "date": 1758772274299,
+            "name": "C:\\Users\\emanu\\Desktop\\dr-salitas-bot\\logs\\error-2025-09-25.log",
+            "hash": "5ee697bdc944dab268c76bfed4bfd39a53ee4fac34774f4fc4b4f5699a4c13f4"
+        }
+    ],
+    "hashType": "sha256"
+}

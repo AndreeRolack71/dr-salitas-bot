@@ -1,16 +1,209 @@
 <div align="center">
 
-# 🤖 Dr. Salitas Bot
+# 🤖 Dr. Salitas Bot - El Perrito con Terno más Bizarro
 
-### *El perrito con terno más inteligente del universo Dr. Pene* 🐕‍🦺
+Un bot de Discord avanzado basado en el universo del Dr. Pene, con personalidad única, sistema de memoria contextual, detección de patrones y múltiples mejoras de rendimiento.
 
-[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
-[![Discord.js](https://img.shields.io/badge/Discord.js-14.x-blue.svg)](https://discord.js.org/)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Status](https://img.shields.io/badge/Status-Active-brightgreen.svg)]()
-[![Railway](https://img.shields.io/badge/Deploy-Railway-purple.svg)](https://railway.app)
+## 🚀 Características Principales
 
-*Un bot de Discord con IA avanzada, personalidad única y sistema de detección de patrones para crear experiencias conversacionales memorables.*
+### 🧠 Sistema de Personalidad Avanzada
+- **Personalidad única**: Dr. Salitas, el perrito con terno más bizarro del universo
+- **Respuestas contextuales**: Adapta sus respuestas según el contexto y el historial
+- **Sistema de humor**: Respuestas variadas con diferentes niveles de bizarrez
+
+### 💾 Sistema de Base de Datos SQLite
+- **Persistencia de datos**: Almacena mensajes, comandos y estadísticas
+- **Seguimiento de usuarios**: Historial completo de interacciones
+- **Métricas de rendimiento**: Estadísticas detalladas del bot
+
+### ⚡ Sistema de Cache Avanzado
+- **Cache multinivel**: Diferentes tipos de cache con TTL personalizados
+- **Optimización de rendimiento**: Respuestas más rápidas para comandos frecuentes
+- **Gestión automática**: Limpieza automática y estadísticas en tiempo real
+
+### 🛡️ Sistema de Validación Robusto
+- **Validación con Joi**: Esquemas de validación para todos los tipos de datos
+- **Sanitización de contenido**: Prevención de ataques XSS y contenido malicioso
+- **Rate limiting**: Protección contra spam y abuso
+- **Detección de patrones peligrosos**: Identificación automática de contenido sospechoso
+
+### 🎯 Comandos Slash Disponibles
+
+#### Comandos Básicos
+- `/ping` - Respuesta única del Dr. Salitas
+- `/chiste` - Chistes bizarros del universo Dr. Pene
+- `/frase` - Frases típicas del universo
+- `/personalidad` - Información sobre Dr. Salitas
+
+#### Comandos de Información
+- `/memoria` - Estadísticas de memoria del bot
+- `/lore` - Información detallada de personajes
+- `/patrones` - Estadísticas del sistema de detección
+
+#### Comandos Interactivos
+- `/batalla` - Genera batallas épicas entre personajes
+- `/cosmic` - Frases cósmicas aleatorias
+- `/mood` - Estado de ánimo actual del Dr. Salitas
+
+### 🔍 Sistema de Detección de Patrones
+- **Análisis de comportamiento**: Detecta patrones en las conversaciones
+- **Respuestas adaptativas**: Ajusta las respuestas según los patrones detectados
+- **Estadísticas detalladas**: Métricas sobre patrones identificados
+
+### 📅 Sistema de Mensajes Programados
+- **Mensajes matutinos**: Saludos únicos cada mañana
+- **Mensajes nocturnos**: Despedidas cósmicas los fines de semana
+- **Eventos especiales**: Mensajes para ocasiones específicas
+
+## 🛠️ Instalación y Configuración
+
+### Prerrequisitos
+- Node.js 16.0.0 o superior
+- npm o yarn
+- Token de bot de Discord
+
+### Instalación
+```bash
+# Clonar el repositorio
+git clone <repository-url>
+cd dr-salitas-bot
+
+# Instalar dependencias
+npm install
+
+# Configurar variables de entorno
+cp .env.example .env
+# Editar .env con tu token de Discord
+```
+
+### Variables de Entorno
+```env
+DISCORD_TOKEN=tu_token_de_discord_aqui
+GENERAL_CHANNEL_ID=id_del_canal_general
+```
+
+### Ejecución
+```bash
+# Modo desarrollo
+npm start
+
+# Ejecutar pruebas
+node test-commands.js
+```
+
+## 📦 Dependencias Principales
+
+- **discord.js**: Framework para bots de Discord
+- **sqlite3**: Base de datos SQLite
+- **node-cache**: Sistema de cache en memoria
+- **joi**: Validación de esquemas
+- **node-cron**: Programación de tareas
+- **winston**: Sistema de logging avanzado
+
+## 🏗️ Arquitectura del Proyecto
+
+```
+dr-salitas-bot/
+├── data/                    # Datos del bot
+│   ├── character-lore.js   # Información de personajes
+│   └── dr-salitas.db       # Base de datos SQLite
+├── database/               # Sistema de base de datos
+│   └── database.js         # Clase Database
+├── memory/                 # Sistema de memoria
+│   └── contextual-memory.js
+├── mood/                   # Sistema de humor
+│   └── mood-system.js
+├── patterns/               # Detección de patrones
+│   ├── pattern-detection.js
+│   └── pattern-responses.js
+├── personality/            # Sistema de personalidad
+│   └── drpene-personality.js
+├── utils/                  # Utilidades
+│   ├── cache.js           # Sistema de cache
+│   ├── logger.js          # Sistema de logging
+│   └── validation.js      # Sistema de validación
+├── index.js               # Archivo principal
+├── test-commands.js       # Script de pruebas
+└── package.json
+```
+
+## 🔧 Sistemas Implementados
+
+### 1. Base de Datos SQLite
+- **Tablas**: users, guilds, messages, commands, bot_stats
+- **Índices optimizados**: Para consultas rápidas
+- **Logging automático**: Todos los mensajes y comandos
+
+### 2. Sistema de Cache
+- **Cache principal**: TTL 10 minutos
+- **Cache de usuarios**: TTL 30 minutos
+- **Cache de comandos**: TTL 5 minutos
+- **Cache de patrones**: TTL 1 hora
+- **Cache de estadísticas**: TTL 15 minutos
+
+### 3. Sistema de Validación
+- **Validación de mensajes**: Contenido, formato y seguridad
+- **Validación de comandos**: Parámetros y permisos
+- **Rate limiting**: 10 mensajes por minuto por usuario
+- **Sanitización**: Limpieza automática de contenido
+
+### 4. Sistema de Limpieza Automática
+- **Patrones**: Cada 6 horas
+- **Rate limits**: Cada 2 horas
+- **Cache**: Automático según TTL
+
+## 📊 Métricas y Monitoreo
+
+El bot incluye sistemas completos de logging y métricas:
+
+- **Logs estructurados**: Con niveles de severidad
+- **Métricas de rendimiento**: Tiempo de respuesta y uso de recursos
+- **Estadísticas de uso**: Comandos más utilizados y patrones detectados
+- **Monitoreo de errores**: Captura y logging de excepciones
+
+## 🧪 Pruebas
+
+El proyecto incluye un sistema de pruebas automatizado:
+
+```bash
+node test-commands.js
+```
+
+Las pruebas verifican:
+- ✅ Conexión a la base de datos
+- ✅ Funcionamiento del sistema de cache
+- ✅ Validación de mensajes y comandos
+- ✅ Detección de contenido peligroso
+- ✅ Rate limiting
+
+## 🚀 Próximas Mejoras
+
+- [ ] Sistema de métricas con Prometheus
+- [ ] Comandos slash avanzados (/configurar, /estadisticas, /admin)
+- [ ] Sistema de respaldo automático
+- [ ] API REST para administración web
+- [ ] Dashboard web para monitoreo
+- [ ] Integración con webhooks
+
+## 🤝 Contribución
+
+1. Fork el proyecto
+2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
+5. Abre un Pull Request
+
+## 📝 Licencia
+
+Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
+
+## 🎭 Créditos
+
+Basado en el universo creativo del Dr. Pene, con Dr. Salitas como el perrito con terno más bizarro y elegante del cosmos.
+
+---
+
+**¡Dr. Salitas está listo para hacer que tu servidor de Discord sea más bizarro y divertido! 🐕‍🦺✨**
 
 ---
 

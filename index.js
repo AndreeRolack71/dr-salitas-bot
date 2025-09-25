@@ -7,6 +7,10 @@ const PatternDetection = require('./patterns/pattern-detection');
 const PatternResponses = require('./patterns/pattern-responses');
 const { characterLore, cosmicPhrases, battleScenarios } = require('./data/character-lore');
 const cron = require('node-cron');
+const logger = require('./utils/logger');
+const Database = require('./database/database');
+const CacheManager = require('./utils/cache');
+const ValidationSystem = require('./utils/validation');
 
 // Crear instancia del bot
 const client = new Client({
@@ -23,6 +27,9 @@ const contextualMemory = new ContextualMemory();
 const moodSystem = new MoodSystem();
 const patternDetection = new PatternDetection();
 const patternResponses = new PatternResponses();
+const database = new Database();
+const cache = new CacheManager();
+const validation = new ValidationSystem();
 
 // Inyectar el sistema de mood en la personalidad
 drSalitas.setMoodSystem(moodSystem);
@@ -150,7 +157,7 @@ function addAutomaticReactions(message, messageContent) {
         if (Math.random() < probability) {
             // Seleccionar emoji aleatorio del array
             const randomEmoji = selectedKeyword.emojis[Math.floor(Math.random() * selectedKeyword.emojis.length)];
-            message.react(randomEmoji).catch(console.error);
+            message.react(randomEmoji).catch(error => logger.error('Error adding reaction', error));
         }
     }
 }
@@ -361,7 +368,7 @@ const commands = [
 // Registrar comandos slash
 async function registerCommands() {
     try {
-        console.log('Registrando comandos slash...');
+        logger.system('Registrando comandos slash...');
         const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
         
         await rest.put(
@@ -369,17 +376,39 @@ async function registerCommands() {
             { body: commands }
         );
         
-        console.log('Comandos slash registrados exitosamente y wea!');
+        logger.system('Comandos slash registrados exitosamente');
     } catch (error) {
-        console.error('Error registrando comandos:', error);
+        logger.error('Error registrando comandos', error);
     }
 }
 
 // Evento cuando el bot está listo
 client.once('ready', async () => {
-    console.log(`¡${client.user.tag} está conectado y listo pa moquear!`);
-    console.log('🐕‍🦺 Dr.Salitas: ¡El perrito con terno más bizarro está online!');
-    await registerCommands();
+    try {
+        // Inicializar base de datos
+        await database.initialize();
+        
+        // Registrar comandos
+        await registerCommands();
+        
+        logger.discord(`${client.user.tag} está conectado y listo`, { 
+            guilds: client.guilds.cache.size,
+            users: client.users.cache.size 
+        });
+        logger.system('Dr.Salitas: El perrito con terno más bizarro está online');
+        
+        // Registrar información del bot en la base de datos
+        await database.runQuery(`
+            INSERT OR REPLACE INTO bot_config (key, value, description)
+            VALUES 
+                ('bot_name', ?, 'Nombre del bot'),
+                ('bot_id', ?, 'ID del bot'),
+                ('startup_time', ?, 'Última vez que se inició el bot')
+        `, [client.user.tag, client.user.id, new Date().toISOString()]);
+        
+    } catch (error) {
+        logger.error('Error durante la inicialización del bot', error);
+    }
 });
 
 // Manejar comandos slash con personalidad
@@ -411,15 +440,20 @@ client.on('interactionCreate', async (interaction) => {
                 const firstFighter = extractFirstFighter(interaction.message.embeds[0].description);
                 const secondFighter = getCharacterName(characterId);
                 
-                console.log('🔍 Debug - Primer luchador:', firstFighter);
-                console.log('🔍 Debug - Segundo luchador:', secondFighter);
+                logger.debug('Procesando batalla', { 
+                    firstFighter, 
+                    secondFighter,
+                    user: interaction.user.username 
+                });
                 
                 // Buscar los objetos completos de los personajes en characterLore
                 const fighter1Data = Object.values(characterLore).find(char => char.name === firstFighter);
                 const fighter2Data = Object.values(characterLore).find(char => char.name === secondFighter);
                 
-                console.log('🔍 Debug - Fighter1Data:', fighter1Data ? 'Encontrado' : 'NO ENCONTRADO');
-                console.log('🔍 Debug - Fighter2Data:', fighter2Data ? 'Encontrado' : 'NO ENCONTRADO');
+                logger.debug('Datos de luchadores', { 
+                    fighter1Found: !!fighter1Data, 
+                    fighter2Found: !!fighter2Data 
+                });
                 
                 // Verificar que ambos luchadores existan
                 if (!fighter1Data || !fighter2Data) {
@@ -455,19 +489,92 @@ client.on('interactionCreate', async (interaction) => {
     }
     
     if (interaction.isChatInputCommand()) {
+        // Validar comando slash antes de procesarlo
+        const commandData = {
+            commandName: interaction.commandName,
+            userId: interaction.user.id,
+            guildId: interaction.guild?.id || null,
+            options: {}
+        };
+
+        // Extraer opciones si existen
+        if (interaction.options) {
+            for (const option of interaction.options.data) {
+                commandData.options[option.name] = option.value;
+            }
+        }
+
+        // Validar el comando
+        const validationResult = validation.validateSlashCommand(commandData);
+        if (!validationResult.isValid) {
+            logger.warn('Comando slash inválido rechazado', null, {
+                userId: interaction.user.id,
+                command: interaction.commandName,
+                error: validationResult.error
+            });
+            await interaction.reply({
+                content: '❌ **Error de validación:** El comando contiene datos no válidos.',
+                ephemeral: true
+            });
+            return;
+        }
+
+        // Verificar rate limiting
+        const rateLimitResult = validation.checkRateLimit(interaction.user.id);
+        if (!rateLimitResult.allowed) {
+            logger.warn('Rate limit excedido para comando', null, {
+                userId: interaction.user.id,
+                command: interaction.commandName,
+                reason: rateLimitResult.reason
+            });
+            await interaction.reply({
+                content: `⏰ **Límite de velocidad:** ${rateLimitResult.reason}. Intenta de nuevo más tarde.`,
+                ephemeral: true
+            });
+            return;
+        }
+
         // Manejar comandos slash existentes
+        const startTime = Date.now();
+        let commandSuccess = true;
+        let errorMessage = null;
+        
         try {
             switch (interaction.commandName) {
                 case 'ping':
-                    await interaction.reply(drSalitas.getPingResponse());
+                    // Verificar cache primero
+                    const cachedPing = cache.getCommand('ping', interaction.user.id);
+                    if (cachedPing) {
+                        await interaction.reply(cachedPing);
+                    } else {
+                        const response = drSalitas.getPingResponse();
+                        cache.setCommand('ping', interaction.user.id, response, 60); // Cache por 1 minuto
+                        await interaction.reply(response);
+                    }
                     break;
                     
                 case 'chiste':
-                    await interaction.reply(drSalitas.getRandomJoke());
+                    // Verificar cache primero
+                    const cachedJoke = cache.getCommand('chiste', interaction.user.id);
+                    if (cachedJoke) {
+                        await interaction.reply(cachedJoke);
+                    } else {
+                        const joke = drSalitas.getRandomJoke();
+                        cache.setCommand('chiste', interaction.user.id, joke, 300); // Cache por 5 minutos
+                        await interaction.reply(joke);
+                    }
                     break;
                     
                 case 'frase':
-                    await interaction.reply(drSalitas.getRandomPhrase());
+                    // Verificar cache primero
+                    const cachedPhrase = cache.getCommand('frase', interaction.user.id);
+                    if (cachedPhrase) {
+                        await interaction.reply(cachedPhrase);
+                    } else {
+                        const phrase = drSalitas.getRandomPhrase();
+                        cache.setCommand('frase', interaction.user.id, phrase, 300); // Cache por 5 minutos
+                        await interaction.reply(phrase);
+                    }
                     break;
                     
                 case 'personalidad':
@@ -487,8 +594,13 @@ client.on('interactionCreate', async (interaction) => {
                     break;
                     
                 case 'memoria':
-                    const memoryStats = contextualMemory.getMemoryStats();
-                    const memoryInfo = `🧠 **Memoria Dr.Salitas** 📊
+                    // Verificar cache primero
+                    const cachedMemory = cache.getStats('memory');
+                    if (cachedMemory) {
+                        await interaction.reply(cachedMemory);
+                    } else {
+                        const memoryStats = contextualMemory.getMemoryStats();
+                        const memoryInfo = `🧠 **Memoria Dr.Salitas** 📊
 
 **Estadísticas Generales:**
 👥 Usuarios conocidos: ${memoryStats.totalUsers}
@@ -501,12 +613,22 @@ ${memoryStats.topUsers.map((user, index) =>
 ).join('\n')}
 
 ¡Dr.Salitas nunca olvida a sus amigos culiaos! 🐕🧠`;
-                    
-                    await interaction.reply(memoryInfo);
+                        
+                        cache.setStats('memory', memoryInfo, 600); // Cache por 10 minutos
+                        await interaction.reply(memoryInfo);
+                    }
                     break;
                     
                 case 'lore':
                     const personaje = interaction.options.getString('personaje');
+                    
+                    // Verificar cache primero
+                    const cachedLore = cache.get(`lore:${personaje}`);
+                    if (cachedLore) {
+                        await interaction.reply(cachedLore);
+                        break;
+                    }
+                    
                     const loreData = characterLore[personaje];
                     
                     if (!loreData) {
@@ -537,11 +659,13 @@ ${Object.entries(loreData.relationships).map(([char, rel]) => `• **${char}**: 
 
 ¡Así es el lore épico del universo Dr. Pene, culiao! 🍆✨`;
                     
+                    // Cachear el lore por 1 hora
+                    cache.set(`lore:${personaje}`, loreEmbed, 3600);
                     await interaction.reply(loreEmbed);
                     break;
                     
                 case 'batalla':
-                    console.log('🎮 Comando /batalla ejecutado por:', interaction.user.username);
+                    logger.command('batalla', interaction.user, interaction.guild, true);
                     try {
                         // Embed optimizado
                         const battleEmbed = new EmbedBuilder()
@@ -589,9 +713,15 @@ ${Object.entries(loreData.relationships).map(([char, rel]) => `• **${char}**: 
                             components: [row1, row2]
                         });
                         
-                        console.log('✅ Comando /batalla con botones enviado correctamente');
+                        logger.info('Comando batalla enviado correctamente', {
+                            user: interaction.user.username,
+                            guild: interaction.guild?.name
+                        });
                     } catch (error) {
-                        console.error('❌ Error en comando /batalla:', error);
+                        logger.error('Error en comando batalla', error, {
+                            user: interaction.user.username,
+                            guild: interaction.guild?.name
+                        });
                         await interaction.reply({
                             content: '❌ Error al crear la batalla. Intenta de nuevo.',
                             ephemeral: true
@@ -600,19 +730,31 @@ ${Object.entries(loreData.relationships).map(([char, rel]) => `• **${char}**: 
                     break;
                     
                 case 'cosmic':
-                    const randomPhrase = cosmicPhrases[Math.floor(Math.random() * cosmicPhrases.length)];
-                    const cosmicResponse = `${randomPhrase}
+                    // Verificar cache primero
+                    const cachedCosmic = cache.getCommand('cosmic', interaction.user.id);
+                    if (cachedCosmic) {
+                        await interaction.reply(cachedCosmic);
+                    } else {
+                        const randomPhrase = cosmicPhrases[Math.floor(Math.random() * cosmicPhrases.length)];
+                        const cosmicResponse = `${randomPhrase}
 
 *Dr.Salitas contempla el cosmos con su terno elegante mientras susurra sabiduría bizarra* 🐕👔✨`;
-                    
-                    await interaction.reply(cosmicResponse);
+                        
+                        cache.setCommand('cosmic', interaction.user.id, cosmicResponse, 180); // Cache por 3 minutos
+                        await interaction.reply(cosmicResponse);
+                    }
                     break;
                     
                 case 'mood':
-                    const currentMood = moodSystem.getCurrentMood();
-                    const moodReport = moodSystem.getMoodReport();
-                    
-                    const moodResponse = `${currentMood.emoji} **${currentMood.name}** ${currentMood.emoji}
+                    // Verificar cache primero
+                    const cachedMood = cache.getStats('mood');
+                    if (cachedMood) {
+                        await interaction.reply(cachedMood);
+                    } else {
+                        const currentMood = moodSystem.getCurrentMood();
+                        const moodReport = moodSystem.getMoodReport();
+                        
+                        const moodResponse = `${currentMood.emoji} **${currentMood.name}** ${currentMood.emoji}
 
 ${currentMood.description}
 
@@ -626,26 +768,33 @@ ${currentMood.characteristics.map(char => `• ${char}`).join('\n')}
 **🌡️ Intensidad:** ${moodReport.intensity}
 
 *${moodReport.specialNote}* 🐕👔`;
-                    
-                    await interaction.reply(moodResponse);
+                        
+                        cache.setStats('mood', moodResponse, 300); // Cache por 5 minutos
+                        await interaction.reply(moodResponse);
+                    }
                     break;
                     
                 case 'patrones':
-                    const patternStats = patternDetection.getPatternStats();
-                    
-                    // Formatear distribución de emociones
-                    const emotionList = Object.entries(patternStats.emotionDistribution)
-                        .map(([emotion, count]) => `• ${emotion}: ${count} usuarios`)
-                        .join('\n') || '• No hay datos aún';
-                    
-                    // Formatear tópicos populares
-                    const topicList = Object.entries(patternStats.popularTopics)
-                        .sort(([,a], [,b]) => b - a)
-                        .slice(0, 5)
-                        .map(([topic, count]) => `• ${topic}: ${count} menciones`)
-                        .join('\n') || '• No hay datos aún';
-                    
-                    const patternResponse = `🧠 **SISTEMA DE DETECCIÓN DE PATRONES** 🧠
+                    // Verificar cache primero
+                    const cachedPatterns = cache.getStats('patterns');
+                    if (cachedPatterns) {
+                        await interaction.reply(cachedPatterns);
+                    } else {
+                        const patternStats = patternDetection.getPatternStats();
+                        
+                        // Formatear distribución de emociones
+                        const emotionList = Object.entries(patternStats.emotionDistribution)
+                            .map(([emotion, count]) => `• ${emotion}: ${count} usuarios`)
+                            .join('\n') || '• No hay datos aún';
+                        
+                        // Formatear tópicos populares
+                        const topicList = Object.entries(patternStats.popularTopics)
+                            .sort(([,a], [,b]) => b - a)
+                            .slice(0, 5)
+                            .map(([topic, count]) => `• ${topic}: ${count} menciones`)
+                            .join('\n') || '• No hay datos aún';
+                        
+                        const patternResponse = `🧠 **SISTEMA DE DETECCIÓN DE PATRONES** 🧠
 
 **📊 Estadísticas Generales:**
 • Usuarios monitoreados: ${patternStats.totalUsers}
@@ -664,13 +813,38 @@ ${topicList}
 • Detección de spam: ✅ Operativo
 
 *¡El Dr. Salitas está siempre observando y analizando! 👁️🐕👔*`;
-                    
-                    await interaction.reply(patternResponse);
+                        
+                        cache.setStats('patterns', patternResponse, 300); // Cache por 5 minutos
+                        await interaction.reply(patternResponse);
+                    }
                     break;
             }
         } catch (error) {
-            console.error('Error en comando slash:', error);
+            commandSuccess = false;
+            errorMessage = error.message;
+            
+            logger.error('Error en comando slash', error, {
+                command: interaction.commandName,
+                user: interaction.user.username,
+                guild: interaction.guild?.name
+            });
             await interaction.reply('¡Ey wea! ¡Algo salió mal pero sigo siendo elegante! 🐕‍🦺👔');
+        } finally {
+            // Registrar uso del comando en la base de datos
+            const executionTime = Date.now() - startTime;
+            
+            try {
+                await database.logCommand({
+                    commandName: interaction.commandName,
+                    userId: interaction.user.id,
+                    guildId: interaction.guild?.id || null,
+                    success: commandSuccess,
+                    executionTime: executionTime,
+                    errorMessage: errorMessage
+                });
+            } catch (dbError) {
+                logger.error('Error registrando comando en base de datos', dbError);
+            }
         }
     } else if (interaction.isButton()) {
         // Manejar interacciones de botones para la batalla
@@ -745,32 +919,129 @@ ${topicList}
 });
 
 // Manejar mensajes con personalidad inteligente y detección de patrones
-client.on('messageCreate', (message) => {
+client.on('messageCreate', async (message) => {
     // Ignorar mensajes del bot
     if (message.author.bot) return;
 
-    const messageContent = message.content.toLowerCase();
+    // Validar mensaje antes de procesarlo
+    const messageData = {
+        content: message.content,
+        userId: message.author.id,
+        guildId: message.guild?.id || null,
+        channelId: message.channel.id
+    };
+
+    const validationResult = validation.validateUserMessage(messageData);
+    if (!validationResult.isValid) {
+        logger.warn('Mensaje inválido rechazado', null, {
+            userId: message.author.id,
+            guildId: message.guild?.id,
+            error: validationResult.error,
+            content: message.content.substring(0, 50)
+        });
+        
+        // Solo responder si es contenido peligroso, no por límites de longitud
+        if (validationResult.error === 'Contenido no permitido') {
+            try {
+                await message.reply('⚠️ **Contenido no permitido detectado.** Por favor, evita usar contenido potencialmente peligroso.');
+            } catch (error) {
+                logger.error('Error enviando mensaje de validación', error);
+            }
+        }
+        return;
+    }
+
+    // Verificar rate limiting para mensajes
+    const rateLimitResult = validation.checkRateLimit(message.author.id);
+    if (!rateLimitResult.allowed) {
+        logger.debug('Rate limit aplicado a mensaje', {
+            userId: message.author.id,
+            reason: rateLimitResult.reason
+        });
+        // No responder por rate limit en mensajes normales, solo registrar
+        return;
+    }
+
+    const messageContent = validationResult.sanitized.content.toLowerCase();
     
-    // Recordar mensaje en memoria contextual
-    contextualMemory.rememberMessage(
-        message.author.id, 
-        message.author.username, 
-        message, 
-        message.channel.id
-    );
+    try {
+        // Registrar usuario y guild en la base de datos
+        await database.createOrUpdateUser({
+            id: message.author.id,
+            username: message.author.username,
+            displayName: message.author.displayName || message.author.username
+        });
+
+        if (message.guild) {
+            await database.createOrUpdateGuild({
+                id: message.guild.id,
+                name: message.guild.name,
+                ownerId: message.guild.ownerId,
+                memberCount: message.guild.memberCount
+            });
+        }
+
+        // Recordar mensaje en memoria contextual
+        contextualMemory.rememberMessage(
+            message.author.id, 
+            message.author.username, 
+            message, 
+            message.channel.id
+        );
+        
+        // Registrar mensaje en la base de datos
+        await database.logMessage({
+            id: message.id,
+            userId: message.author.id,
+            guildId: message.guild?.id || null,
+            channelId: message.channel.id,
+            content: validationResult.sanitized.content, // Usar contenido sanitizado
+            messageType: 'user',
+            sentimentScore: null, // Se puede agregar análisis de sentimiento después
+            patternDetected: [],
+            responseGenerated: false
+        });
+        
+    } catch (error) {
+        logger.error('Error registrando mensaje en base de datos', error, {
+            messageId: message.id,
+            userId: message.author.id,
+            guildId: message.guild?.id
+        });
+    }
     
     // Sistema de reacciones automáticas
     addAutomaticReactions(message, messageContent);
     
     // Respuesta especial para "moco" - siempre responde (prioridad máxima)
     if (messageContent.includes('moco')) {
-        message.reply(drSalitas.getMocoResponse());
+        // Verificar cache para respuesta de moco
+        const cacheKey = `moco_response_${message.author.id}`;
+        const cachedMocoResponse = cache.getPersonalityResponse(cacheKey);
+        
+        if (cachedMocoResponse) {
+            message.reply(cachedMocoResponse);
+        } else {
+            const mocoResponse = drSalitas.getMocoResponse();
+            cache.setPersonalityResponse(cacheKey, mocoResponse, 60); // Cache por 1 minuto
+            message.reply(mocoResponse);
+        }
         return;
     }
     
     // Responder a menciones directas del bot - siempre responde (prioridad máxima)
     if (message.mentions.has(client.user)) {
-        message.reply(drSalitas.getSmartResponse(message.content));
+        // Verificar cache para respuesta inteligente
+        const cacheKey = `smart_response_${message.author.id}_${message.content.slice(0, 50)}`;
+        const cachedSmartResponse = cache.getPersonalityResponse(cacheKey);
+        
+        if (cachedSmartResponse) {
+            message.reply(cachedSmartResponse);
+        } else {
+            const smartResponse = drSalitas.getSmartResponse(message.content);
+            cache.setPersonalityResponse(cacheKey, smartResponse, 300); // Cache por 5 minutos
+            message.reply(smartResponse);
+        }
         return;
     }
     
@@ -831,7 +1102,16 @@ client.on('messageCreate', (message) => {
     // Intentar generar respuesta contextual personalizada (solo si patrones no respondió)
     const contextualResponse = contextualMemory.generateContextualResponse(message.author.id, message);
     if (contextualResponse && Math.random() < 0.2) { // Reducido a 20% para dar prioridad a patrones
-        message.reply(contextualResponse);
+        // Verificar cache para respuesta contextual
+        const cacheKey = `contextual_${message.author.id}_${message.content.slice(0, 30)}`;
+        const cachedContextualResponse = cache.getPersonalityResponse(cacheKey);
+        
+        if (cachedContextualResponse) {
+            message.reply(cachedContextualResponse);
+        } else {
+            cache.setPersonalityResponse(cacheKey, contextualResponse, 180); // Cache por 3 minutos
+            message.reply(contextualResponse);
+        }
         return;
     }
 
@@ -843,7 +1123,17 @@ client.on('messageCreate', (message) => {
     // Verificar palabras clave de alta prioridad
     if (highPriorityKeywords.some(keyword => messageContent.includes(keyword))) {
         if (Math.random() < 0.2) { // 20% probabilidad
-            message.reply(drSalitas.getSmartResponse(message.content));
+            // Verificar cache para respuesta de alta prioridad
+            const cacheKey = `high_priority_${message.author.id}_${message.content.slice(0, 40)}`;
+            const cachedHighResponse = cache.getPersonalityResponse(cacheKey);
+            
+            if (cachedHighResponse) {
+                message.reply(cachedHighResponse);
+            } else {
+                const smartResponse = drSalitas.getSmartResponse(message.content);
+                cache.setPersonalityResponse(cacheKey, smartResponse, 240); // Cache por 4 minutos
+                message.reply(smartResponse);
+            }
             return;
         }
     }
@@ -851,7 +1141,17 @@ client.on('messageCreate', (message) => {
     // Verificar palabras clave de prioridad media
     if (mediumPriorityKeywords.some(keyword => messageContent.includes(keyword))) {
         if (Math.random() < 0.12) { // 12% probabilidad
-            message.reply(drSalitas.getSmartResponse(message.content));
+            // Verificar cache para respuesta de prioridad media
+            const cacheKey = `medium_priority_${message.author.id}_${message.content.slice(0, 40)}`;
+            const cachedMediumResponse = cache.getPersonalityResponse(cacheKey);
+            
+            if (cachedMediumResponse) {
+                message.reply(cachedMediumResponse);
+            } else {
+                const smartResponse = drSalitas.getSmartResponse(message.content);
+                cache.setPersonalityResponse(cacheKey, smartResponse, 300); // Cache por 5 minutos
+                message.reply(smartResponse);
+            }
             return;
         }
     }
@@ -859,7 +1159,17 @@ client.on('messageCreate', (message) => {
     // Verificar palabras clave de baja prioridad
     if (lowPriorityKeywords.some(keyword => messageContent.includes(keyword))) {
         if (Math.random() < 0.08) { // 8% probabilidad
-            message.reply(drSalitas.getSmartResponse(message.content));
+            // Verificar cache para respuesta de baja prioridad
+            const cacheKey = `low_priority_${message.author.id}_${message.content.slice(0, 40)}`;
+            const cachedLowResponse = cache.getPersonalityResponse(cacheKey);
+            
+            if (cachedLowResponse) {
+                message.reply(cachedLowResponse);
+            } else {
+                const smartResponse = drSalitas.getSmartResponse(message.content);
+                cache.setPersonalityResponse(cacheKey, smartResponse, 360); // Cache por 6 minutos
+                message.reply(smartResponse);
+            }
             return;
         }
     }
@@ -867,11 +1177,11 @@ client.on('messageCreate', (message) => {
 
 // Manejo de errores
 client.on('error', (error) => {
-    console.error('Error del cliente Discord:', error);
+    logger.error('Error del cliente Discord', error);
 });
 
 process.on('unhandledRejection', (error) => {
-    console.error('Error no manejado:', error);
+    logger.error('Error no manejado', error);
 });
 
 // Funciones auxiliares para el sistema de batalla
@@ -953,9 +1263,9 @@ function setupScheduledMessages() {
             );
             
             if (generalChannel) {
-                console.log(`🕐 Sistema de horarios configurado para el canal: ${generalChannel.name}`);
+                logger.system(`Sistema de horarios configurado para el canal: ${generalChannel.name}`);
             } else {
-                console.log('⚠️ No se encontró un canal apropiado para mensajes automáticos');
+                logger.warn('No se encontró un canal apropiado para mensajes automáticos');
             }
         }
     });
@@ -1058,15 +1368,32 @@ setupScheduledMessages();
 function setupPatternCleanup() {
     // Limpiar datos antiguos cada 6 horas
     cron.schedule('0 */6 * * *', () => {
-        console.log('🧹 Ejecutando limpieza del sistema de patrones...');
+        logger.system('Ejecutando limpieza del sistema de patrones');
         patternDetection.cleanup();
-        console.log('✅ Limpieza de patrones completada');
+        logger.system('Limpieza de patrones completada');
     }, {
         timezone: "America/Santiago"
     });
     
-    console.log('🔧 Sistema de limpieza de patrones configurado');
+    logger.system('Sistema de limpieza de patrones configurado');
 }
 
 // Inicializar limpieza de patrones
 setupPatternCleanup();
+
+// Configurar limpieza periódica del sistema de validación
+function setupValidationCleanup() {
+    // Limpiar rate limits cada 2 horas
+    cron.schedule('0 */2 * * *', () => {
+        logger.system('Ejecutando limpieza del sistema de validación');
+        validation.cleanupRateLimits();
+        logger.system('Limpieza de validación completada');
+    }, {
+        timezone: "America/Santiago"
+    });
+    
+    logger.system('Sistema de limpieza de validación configurado');
+}
+
+// Inicializar limpieza de validación
+setupValidationCleanup();
