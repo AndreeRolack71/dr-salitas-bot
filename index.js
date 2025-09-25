@@ -622,7 +622,13 @@ client.on('interactionCreate', async (interaction) => {
                         // VALIDAR que el cache no esté vacío antes de usarlo
                         if (cachedMemory && typeof cachedMemory === 'string' && cachedMemory.trim() && cachedMemory.length > 0) {
                             logger.info('DEBUG: Usando memoria cacheada válida');
-                            await interaction.reply(cachedMemory);
+                            
+                            // Verificar que la interacción no haya sido respondida antes de usar cache
+                            if (!interaction.replied && !interaction.deferred) {
+                                await interaction.reply(cachedMemory);
+                            } else {
+                                logger.warn('DEBUG: Interacción ya fue respondida, saltando cache reply');
+                            }
                         } else {
                             logger.info('DEBUG: Obteniendo estadísticas de memoria');
                             const memoryStats = contextualMemory.getMemoryStats();
@@ -696,12 +702,28 @@ ${sanitizedTopUsers.length > 0 ? sanitizedTopUsers.join('\n') : 'No hay usuarios
                             });
                             
                             cache.setStats('memory', memoryInfo, 600); // Cache por 10 minutos
+                            
+                        try {
                             logger.info('DEBUG: Enviando respuesta', {
                                 messageLength: memoryInfo.length
                             });
                             
-                            await interaction.reply(memoryInfo);
-                            logger.info('DEBUG: Respuesta enviada exitosamente');
+                            // Verificar que la interacción no haya sido respondida antes de enviar
+                            if (!interaction.replied && !interaction.deferred) {
+                                await interaction.reply(memoryInfo);
+                                logger.info('DEBUG: Respuesta enviada exitosamente');
+                            } else {
+                                logger.warn('DEBUG: Interacción ya fue respondida, saltando reply');
+                            }
+                        } catch (replyError) {
+                            logger.error('Error enviando respuesta de memoria', {
+                                replyError: replyError.message,
+                                replyStack: replyError.stack,
+                                interactionReplied: interaction.replied,
+                                interactionDeferred: interaction.deferred
+                            });
+                            throw replyError; // Re-lanzar para que sea manejado por el catch principal
+                        }
                         }
                     } catch (error) {
                         logger.error('Error en comando memoria', {
@@ -718,14 +740,21 @@ ${sanitizedTopUsers.length > 0 ? sanitizedTopUsers.join('\n') : 'No hay usuarios
                         
                         // Respuesta de fallback
                         try {
-                            await interaction.reply({
-                                content: '🧠 **Error en Memoria Dr.Salitas** ❌\n\nNo pude acceder a mis recuerdos en este momento. ¡Pero sigo siendo el perrito más elegante! 🐕👔',
-                                flags: 64 // MessageFlags.Ephemeral
-                            });
+                            // Verificar que la interacción no haya sido respondida antes del fallback
+                            if (!interaction.replied && !interaction.deferred) {
+                                await interaction.reply({
+                                    content: '🧠 **Error en Memoria Dr.Salitas** ❌\n\nNo pude acceder a mis recuerdos en este momento. ¡Pero sigo siendo el perrito más elegante! 🐕👔',
+                                    flags: 64 // MessageFlags.Ephemeral
+                                });
+                            } else {
+                                logger.warn('DEBUG: Interacción ya fue respondida, saltando fallback reply');
+                            }
                         } catch (replyError) {
                             logger.error('Error enviando respuesta de fallback', {
                                 replyError: replyError.message,
-                                replyStack: replyError.stack
+                                replyStack: replyError.stack,
+                                interactionReplied: interaction.replied,
+                                interactionDeferred: interaction.deferred
                             });
                         }
                     }
@@ -858,15 +887,23 @@ ${Object.entries(loreData.relationships).map(([char, rel]) => `• **${char}**: 
                     break;
                     
                 case 'mood':
-                    // Verificar cache primero
-                    const cachedMood = cache.getStats('mood');
-                    if (cachedMood) {
-                        await interaction.reply(cachedMood);
-                    } else {
-                        const currentMood = moodSystem.getCurrentMood();
-                        const moodReport = moodSystem.getMoodReport();
-                        
-                        const moodResponse = `${currentMood.emoji} **${currentMood.name}** ${currentMood.emoji}
+                    try {
+                        // Verificar cache primero
+                        const cachedMood = cache.getStats('mood');
+                        if (cachedMood && typeof cachedMood === 'string' && cachedMood.trim().length > 0) {
+                            await interaction.reply(cachedMood);
+                        } else {
+                            const currentMoodKey = moodSystem.getCurrentMood();
+                            const currentMood = moodSystem.getMoodInfo();
+                            
+                            // Validar que tenemos datos válidos
+                            if (!currentMood || !currentMood.name) {
+                                throw new Error('No se pudo obtener información del mood actual');
+                            }
+                            
+                            const moodGreeting = moodSystem.getMoodGreeting();
+                            
+                            const moodResponse = `${currentMood.emoji} **${currentMood.name}** ${currentMood.emoji}
 
 ${currentMood.description}
 
@@ -874,15 +911,48 @@ ${currentMood.description}
 ${currentMood.characteristics.map(char => `• ${char}`).join('\n')}
 
 **💬 Saludo típico:**
-"${currentMood.greeting}"
+"${moodGreeting}"
 
-**⏰ Horario:** ${moodReport.timeRange}
-**🌡️ Intensidad:** ${moodReport.intensity}
+**⏰ Horario:** ${currentMood.timeRange}
 
-*${moodReport.specialNote}* 🐕👔`;
+*Dr.Salitas está en modo ${currentMood.name.toLowerCase()}* 🐕👔`;
+                            
+                            // Validar que el mensaje no esté vacío
+                            if (!moodResponse || !moodResponse.trim() || moodResponse.trim().length === 0) {
+                                throw new Error('El mensaje de mood está vacío después de construcción');
+                            }
+                            
+                            cache.setStats('mood', moodResponse, 300); // Cache por 5 minutos
+                            await interaction.reply(moodResponse);
+                        }
+                    } catch (error) {
+                        logger.error('Error en comando mood', {
+                            command: 'mood',
+                            user: interaction.user.username,
+                            userId: interaction.user.id,
+                            guild: interaction.guild?.name,
+                            guildId: interaction.guild?.id,
+                            errorMessage: error.message,
+                            errorStack: error.stack,
+                            timestamp: new Date().toISOString()
+                        });
                         
-                        cache.setStats('mood', moodResponse, 300); // Cache por 5 minutos
-                        await interaction.reply(moodResponse);
+                        // Respuesta de fallback
+                        try {
+                            if (!interaction.replied && !interaction.deferred) {
+                                await interaction.reply({
+                                    content: '🎭 **Error en Sistema de Mood** ❌\n\nNo pude acceder a mi estado de ánimo actual. ¡Pero sigo siendo elegante! 🐕👔',
+                                    flags: 64 // MessageFlags.Ephemeral
+                                });
+                            }
+                        } catch (replyError) {
+                            logger.error('Error enviando respuesta de fallback para mood', {
+                                replyError: replyError.message,
+                                replyStack: replyError.stack,
+                                interactionReplied: interaction.replied,
+                                interactionDeferred: interaction.deferred
+                            });
+                        }
                     }
                     break;
                     
