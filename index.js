@@ -614,11 +614,14 @@ client.on('interactionCreate', async (interaction) => {
                         const cachedMemory = cache.getStats('memory');
                         logger.info('DEBUG: Cache verificado', {
                             hasCachedMemory: !!cachedMemory,
-                            cachedLength: cachedMemory ? cachedMemory.length : 0
+                            cachedLength: cachedMemory ? cachedMemory.length : 0,
+                            cachedType: typeof cachedMemory,
+                            cachedValue: cachedMemory ? cachedMemory.substring(0, 100) + '...' : 'null/undefined'
                         });
                         
-                        if (cachedMemory) {
-                            logger.info('DEBUG: Usando memoria cacheada');
+                        // VALIDAR que el cache no esté vacío antes de usarlo
+                        if (cachedMemory && cachedMemory.trim() && cachedMemory.length > 0) {
+                            logger.info('DEBUG: Usando memoria cacheada válida');
                             await interaction.reply(cachedMemory);
                         } else {
                             logger.info('DEBUG: Obteniendo estadísticas de memoria');
@@ -670,13 +673,27 @@ ${sanitizedTopUsers.length > 0 ? sanitizedTopUsers.join('\n') : 'No hay usuarios
                             });
                             
                             // Verificar que el mensaje no esté vacío y no sea demasiado largo
-                            if (!memoryInfo.trim()) {
-                                throw new Error('El mensaje de memoria está vacío');
+                            if (!memoryInfo || !memoryInfo.trim() || memoryInfo.trim().length === 0) {
+                                logger.error('❌ [MEMORIA] El mensaje construido está vacío', {
+                                    memoryInfo: memoryInfo,
+                                    memoryInfoType: typeof memoryInfo,
+                                    memoryInfoLength: memoryInfo ? memoryInfo.length : 0,
+                                    memoryStats: memoryStats
+                                });
+                                throw new Error('El mensaje de memoria está vacío después de construcción');
                             }
                             
                             if (memoryInfo.length > 2000) {
-                                throw new Error('El mensaje de memoria es demasiado largo');
+                                logger.warn('⚠️ [MEMORIA] El mensaje es demasiado largo, truncando', {
+                                    originalLength: memoryInfo.length
+                                });
+                                memoryInfo = memoryInfo.substring(0, 1900) + '\n\n*...mensaje truncado*';
                             }
+                            
+                            logger.info('✅ [MEMORIA] Mensaje validado y listo para envío', {
+                                finalLength: memoryInfo.length,
+                                finalPreview: memoryInfo.substring(0, 150) + '...'
+                            });
                             
                             cache.setStats('memory', memoryInfo, 600); // Cache por 10 minutos
                             logger.info('DEBUG: Enviando respuesta', {
