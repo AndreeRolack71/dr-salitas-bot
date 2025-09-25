@@ -383,7 +383,7 @@ async function registerCommands() {
 }
 
 // Evento cuando el bot está listo
-client.once('ready', async () => {
+client.once('clientReady', async () => {
     try {
         // Inicializar base de datos
         await database.initialize();
@@ -826,9 +826,32 @@ ${topicList}
             logger.error('Error en comando slash', error, {
                 command: interaction.commandName,
                 user: interaction.user.username,
-                guild: interaction.guild?.name
+                userId: interaction.user.id,
+                guild: interaction.guild?.name,
+                guildId: interaction.guild?.id,
+                errorStack: error.stack,
+                timestamp: new Date().toISOString()
             });
-            await interaction.reply('¡Ey wea! ¡Algo salió mal pero sigo siendo elegante! 🐕‍🦺👔');
+            
+            // Intentar responder al usuario si la interacción no ha sido respondida
+            try {
+                if (!interaction.replied && !interaction.deferred) {
+                    await interaction.reply({
+                        content: '¡Ey wea! ¡Algo salió mal pero sigo siendo elegante! 🐕‍🦺👔\n*Error interno del sistema*',
+                        ephemeral: true
+                    });
+                } else if (interaction.deferred) {
+                    await interaction.editReply({
+                        content: '¡Ey wea! ¡Algo salió mal pero sigo siendo elegante! 🐕‍🦺👔\n*Error interno del sistema*'
+                    });
+                }
+            } catch (replyError) {
+                logger.error('Error del cliente Discord', replyError, {
+                    originalError: error.message,
+                    command: interaction.commandName,
+                    user: interaction.user.username
+                });
+            }
         } finally {
             // Registrar uso del comando en la base de datos
             const executionTime = Date.now() - startTime;
