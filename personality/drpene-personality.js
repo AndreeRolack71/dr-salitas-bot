@@ -45,24 +45,72 @@ class DrPenePersonality {
     getContextualResponses() {
         return {
             greeting: [
-                "¡Wena culiao! ¿Cómo andai?",
-                "¡Ey bastardo! ¿Todo bien o no?",
-                "¡Hola conchetumare! Dr.Salitas presente"
+                // Saludos flaites y ordinarios
+                "¡Wena culiao! ¿Andai vivo o qué wea?",
+                "¡Ey bastardo! ¿Cómo estai, hijo de la gran puta?",
+                "¡Hola conchetumare! Dr.Salitas anda por aquí",
+                "¡Wena wn! ¿Todo piola o andai cagao?",
+                "¡Eyyy! ¿Qué tal, culiao de mierda?",
+                "¡Wena hermano! ¿Andai entero o medio quebrao?",
+                "¡Hola hijo de puta! ¿Cómo vai?",
+                "¡Ey culiao! ¿Vivo todavía o ya te moriste?",
+                
+                // Saludos más puercas con referencias Dr.Pene
+                "¡Saludos cósmicos, culiao! Dr.Salitas anda suelto 🎩",
+                "¡Wena! El perrito más hijo de puta del universo",
+                "¡Hola bastardo! ¿Listo para puras weas raras?",
+                "¡Ey culiao! Dr.Salitas detecta movimiento sospechoso",
+                "¡Wena wn! El perrito con terno anda de gira",
+                
+                // Saludos según el horario más ordinarios
+                "¡Buenos días, hijos de puta! ☀️ Dr.Salitas despertó con ganas de wear",
+                "¡Buenas tardes, culiaos! 🌅 Hora de hacer cagadas",
+                "¡Buenas noches, bastardos! 🌙 A puro webear hasta tarde",
+                "¡Wena! ¿Preparao para puras weas bizarras?",
+                "¡Hola! Dr.Salitas nunca duerme, siempre weando"
             ],
             farewell: [
-                "¡Chao culiao! Que te vaya bien",
-                "¡Nos vemos bastardo! Cuídate",
-                "¡Hasta luego conchetumare!"
+                // Despedidas flaites y ordinarias
+                "¡Chao culiao! Que no te pase nada malo",
+                "¡Nos vemos bastardo! No te mueras",
+                "¡Hasta luego conchetumare! Cuídate el hoyo",
+                "¡Chao wn! Anda con cuidao que está bravo el mundo",
+                "¡Nos vidimo hijo de puta! Mantente vivo",
+                "¡Adiós culiao! No hagas muchas cagadas",
+                "¡Chao hermano! Que no te agarren los pacos",
+                "¡Hasta luego wn! Anda piola",
+                
+                // Despedidas puercas con referencias cósmicas
+                "¡Chao! El universo Dr.Pene te cuida, culiao 🌟",
+                "¡Hasta luego! Que la mala cuea no te pille",
+                "¡Nos vemos! Dr.Salitas vigila desde las sombras, bastardo",
+                "¡Chao culiao! Sigue siendo un hijo de puta extraordinario",
+                "¡Adiós wn! El cosmos está lleno de weas raras",
+                
+                // Despedidas según contexto más ordinarias
+                "¡Que descanses! A soñar puras weas bizarras 🌙",
+                "¡Hasta mañana! Dr.Salitas va a seguir weando aquí",
+                "¡Chao! Que tengas aventuras culiás",
+                "¡Nos vemos! Mantén vivo el espíritu flaite",
+                "¡Adiós! El perrito elegante no se olvida de los culiaos"
             ],
             excitement: [
-                "¡Wena po! ¡Eso está bacán!",
-                "¡Genial culiao! Me alegro",
-                "¡Bacán bastardo! Eso me gusta"
+                "¡Wena hermano! ¡Eso está la raja!",
+                "¡Genial culiao! Me alegro caleta",
+                "¡Bacán bastardo! Esa wea me gusta",
+                "¡Épico wn! Dr.Salitas aprueba esa cagada",
+                "¡Cósmico! Esa energía culiá me encanta",
+                "¡La cagó! Eso está demasiado bueno",
+                "¡Pulento hermano! Me tinca esa wea"
             ],
             confusion: [
-                "¿Qué wea? No cacho nada",
-                "¿Cómo culiao? Explícate mejor",
-                "No entiendo ni una wea, bastardo"
+                "¿Qué chucha? No cacho ni una wea",
+                "¿Cómo culiao? Explícate mejor, bastardo",
+                "No entiendo ni mierda, wn",
+                "¿Ah? Dr.Salitas está más perdío que la chucha",
+                "¿Qué ondas? No procesé esa wea",
+                "¿De qué mierda hablas, culiao?",
+                "¿Cómo es la wea? No cacho nada"
             ]
         };
     }
@@ -198,13 +246,56 @@ class DrPenePersonality {
     }
 
     isGreeting(message) {
-        const greetings = ['hola', 'wena', 'buenas', 'saludos', 'ey', 'hey'];
-        return greetings.some(greeting => message.includes(greeting));
+        const greetings = [
+            // Saludos tradicionales
+            'hola', 'wena', 'buenas', 'saludos', 'ey', 'hey', 'hi',
+            // Saludos chilenos específicos
+            'wena wn', 'wena culiao', 'wena po', 'wena bastardo',
+            'que tal', 'como andai', 'como estas', 'como estai',
+            'que onda', 'que ondas', 'que hay', 'que hubo',
+            // Saludos de tiempo específico
+            'buenos dias', 'buenas tardes', 'buenas noches',
+            'buen dia', 'buena tarde', 'buena noche',
+            // Saludos informales
+            'alo', 'aló', 'epa', 'eyyy', 'oye', 'oe',
+            // Saludos con menciones
+            'salitas', 'dr salitas', 'doctor salitas',
+            // Expresiones de llegada
+            'llegue', 'llegué', 'aqui estoy', 'ya llegue', 'presente'
+        ];
+        
+        const lowerMessage = message.toLowerCase();
+        return greetings.some(greeting => {
+            // Buscar coincidencias exactas o al inicio/final de palabras
+            const regex = new RegExp(`\\b${greeting.replace(/\s+/g, '\\s+')}\\b`, 'i');
+            return regex.test(lowerMessage) || lowerMessage.startsWith(greeting) || lowerMessage.endsWith(greeting);
+        });
     }
 
     isFarewell(message) {
-        const farewells = ['chao', 'adiós', 'nos vemos', 'hasta luego', 'bye'];
-        return farewells.some(farewell => message.includes(farewell));
+        const farewells = [
+            // Despedidas tradicionales
+            'chao', 'adiós', 'adios', 'nos vemos', 'hasta luego', 'bye', 'bay',
+            // Despedidas chilenas específicas
+            'chao culiao', 'chao wn', 'chao bastardo', 'chao po',
+            'nos vimo', 'nos vidimo', 'chaito', 'chaíto',
+            // Despedidas de tiempo específico
+            'buenas noches', 'que descanses', 'que duermas bien',
+            'hasta mañana', 'nos vemos mañana',
+            // Despedidas informales
+            'me voy', 'me piro', 'me las pico', 'me fui',
+            'tengo que irme', 'me tengo que ir', 'ya me voy',
+            // Expresiones de salida
+            'salgo', 'me salgo', 'desconecto', 'me desconecto',
+            'offline', 'afk', 'away'
+        ];
+        
+        const lowerMessage = message.toLowerCase();
+        return farewells.some(farewell => {
+            // Buscar coincidencias exactas o al inicio/final de palabras
+            const regex = new RegExp(`\\b${farewell.replace(/\s+/g, '\\s+')}\\b`, 'i');
+            return regex.test(lowerMessage) || lowerMessage.startsWith(farewell) || lowerMessage.endsWith(farewell);
+        });
     }
 
     getRandomResponse(responses) {
@@ -215,26 +306,82 @@ class DrPenePersonality {
     }
 
     // Respuesta general inteligente
-    getSmartResponse(message) {
+    getSmartResponse(message, context = {}) {
+        const responses = this.getContextualResponses();
+        
+        if (this.isGreeting(message)) {
+            // Seleccionar respuesta basada en el contexto temporal y emocional
+            let greetingPool = responses.greeting;
+            
+            // Filtrar por hora del día si está disponible
+            if (context.timeOfDay) {
+                const timeSpecific = responses.greeting.filter(g => {
+                    if (context.timeOfDay === 'morning') return g.includes('Buenos días') || g.includes('☀️');
+                    if (context.timeOfDay === 'afternoon') return g.includes('Buenas tardes') || g.includes('🌅');
+                    if (context.timeOfDay === 'night') return g.includes('Buenas noches') || g.includes('🌙');
+                    return true;
+                });
+                if (timeSpecific.length > 0) greetingPool = timeSpecific;
+            }
+            
+            // Añadir variación según el usuario si es conocido
+            if (context.isKnownUser) {
+                const personalizedGreetings = [
+                    "¡Wena de nuevo, culiao! ¿Volviste por más bizarreadas?",
+                    "¡Ey! El bastardo favorito ha regresado",
+                    "¡Hola otra vez! Dr.Salitas te reconoce perfectamente"
+                ];
+                greetingPool = [...greetingPool, ...personalizedGreetings];
+            }
+            
+            return this.getRandomResponse(greetingPool);
+        }
+        
+        if (this.isFarewell(message)) {
+            // Seleccionar despedida basada en el contexto
+            let farewellPool = responses.farewell;
+            
+            // Despedidas específicas por hora
+            if (context.timeOfDay === 'night') {
+                const nightFarewells = responses.farewell.filter(f => 
+                    f.includes('descanses') || f.includes('sueños') || f.includes('🌙')
+                );
+                if (nightFarewells.length > 0) farewellPool = nightFarewells;
+            }
+            
+            // Despedidas personalizadas para usuarios conocidos
+            if (context.isKnownUser) {
+                const personalizedFarewells = [
+                    "¡Chao culiao! Vuelve pronto por más aventuras cósmicas",
+                    "¡Nos vemos bastardo! Dr.Salitas te extrañará",
+                    "¡Hasta luego! Que la elegancia te acompañe siempre"
+                ];
+                farewellPool = [...farewellPool, ...personalizedFarewells];
+            }
+            
+            return this.getRandomResponse(farewellPool);
+        }
+        
+        // Respuestas por defecto según el contexto emocional
+        if (context.excitement) {
+            return this.getRandomResponse(responses.excitement);
+        }
+        
+        if (context.confusion) {
+            return this.getRandomResponse(responses.confusion);
+        }
+        
+        // Detectar emociones en el mensaje para respuestas automáticas
         const lowerMessage = message.toLowerCase();
-        
-        // Detectar contexto y responder apropiadamente
-        if (this.isGreeting(lowerMessage)) {
-            return this.getContextualResponse(message, 'greeting');
-        }
-        
-        if (this.isFarewell(lowerMessage)) {
-            return this.getContextualResponse(message, 'farewell');
-        }
         
         // Palabras que generan emoción
         if (lowerMessage.includes('genial') || lowerMessage.includes('bacán') || lowerMessage.includes('wena') || lowerMessage.includes('buena')) {
-            return this.getContextualResponse(message, 'excitement');
+            return this.getRandomResponse(responses.excitement);
         }
         
         // Palabras de confusión
         if (lowerMessage.includes('qué') || lowerMessage.includes('como') || lowerMessage.includes('?') || lowerMessage.includes('no entiendo')) {
-            return this.getContextualResponse(message, 'confusion');
+            return this.getRandomResponse(responses.confusion);
         }
         
         // Respuestas específicas para nombres del grupo

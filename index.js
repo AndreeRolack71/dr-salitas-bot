@@ -21,6 +21,14 @@ const client = new Client({
     ]
 });
 
+// Función para obtener la hora del día
+function getTimeOfDay() {
+    const hour = new Date().getHours();
+    if (hour >= 6 && hour < 12) return 'morning';
+    if (hour >= 12 && hour < 18) return 'afternoon';
+    return 'night';
+}
+
 // Inicializar personalidad Dr.Salitas, memoria contextual, sistema de mood y detección de patrones
 const drSalitas = new DrPenePersonality();
 const contextualMemory = new ContextualMemory();
@@ -1146,6 +1154,14 @@ client.on('messageCreate', async (message) => {
     // Verificar palabras clave de alta prioridad
     if (highPriorityKeywords.some(keyword => messageContent.includes(keyword))) {
         if (Math.random() < 0.2) { // 20% probabilidad
+            // Crear contexto para respuestas más inteligentes
+            const context = {
+                timeOfDay: getTimeOfDay(),
+                isKnownUser: contextualMemory.hasUserHistory(message.author.id),
+                excitement: messageContent.includes('!') || messageContent.includes('genial') || messageContent.includes('bacán'),
+                confusion: messageContent.includes('?') || messageContent.includes('qué') || messageContent.includes('como')
+            };
+            
             // Verificar cache para respuesta de alta prioridad
             const cacheKey = `high_priority_${message.author.id}_${message.content.slice(0, 40)}`;
             const cachedHighResponse = cache.getPersonalityResponse(cacheKey);
@@ -1153,7 +1169,7 @@ client.on('messageCreate', async (message) => {
             if (cachedHighResponse) {
                 message.reply(cachedHighResponse);
             } else {
-                const smartResponse = drSalitas.getSmartResponse(message.content);
+                const smartResponse = drSalitas.getSmartResponse(message.content, context);
                 cache.setPersonalityResponse(cacheKey, smartResponse, 240); // Cache por 4 minutos
                 message.reply(smartResponse);
             }
@@ -1164,6 +1180,14 @@ client.on('messageCreate', async (message) => {
     // Verificar palabras clave de prioridad media
     if (mediumPriorityKeywords.some(keyword => messageContent.includes(keyword))) {
         if (Math.random() < 0.12) { // 12% probabilidad
+            // Crear contexto para respuestas más inteligentes
+            const context = {
+                timeOfDay: getTimeOfDay(),
+                isKnownUser: contextualMemory.hasUserHistory(message.author.id),
+                excitement: messageContent.includes('!') || messageContent.includes('genial') || messageContent.includes('bacán'),
+                confusion: messageContent.includes('?') || messageContent.includes('qué') || messageContent.includes('como')
+            };
+            
             // Verificar cache para respuesta de prioridad media
             const cacheKey = `medium_priority_${message.author.id}_${message.content.slice(0, 40)}`;
             const cachedMediumResponse = cache.getPersonalityResponse(cacheKey);
@@ -1171,7 +1195,7 @@ client.on('messageCreate', async (message) => {
             if (cachedMediumResponse) {
                 message.reply(cachedMediumResponse);
             } else {
-                const smartResponse = drSalitas.getSmartResponse(message.content);
+                const smartResponse = drSalitas.getSmartResponse(message.content, context);
                 cache.setPersonalityResponse(cacheKey, smartResponse, 300); // Cache por 5 minutos
                 message.reply(smartResponse);
             }
@@ -1182,6 +1206,14 @@ client.on('messageCreate', async (message) => {
     // Verificar palabras clave de baja prioridad
     if (lowPriorityKeywords.some(keyword => messageContent.includes(keyword))) {
         if (Math.random() < 0.08) { // 8% probabilidad
+            // Crear contexto para respuestas más inteligentes
+            const context = {
+                timeOfDay: getTimeOfDay(),
+                isKnownUser: contextualMemory.hasUserHistory(message.author.id),
+                excitement: messageContent.includes('!') || messageContent.includes('genial') || messageContent.includes('bacán'),
+                confusion: messageContent.includes('?') || messageContent.includes('qué') || messageContent.includes('como')
+            };
+            
             // Verificar cache para respuesta de baja prioridad
             const cacheKey = `low_priority_${message.author.id}_${message.content.slice(0, 40)}`;
             const cachedLowResponse = cache.getPersonalityResponse(cacheKey);
@@ -1189,10 +1221,88 @@ client.on('messageCreate', async (message) => {
             if (cachedLowResponse) {
                 message.reply(cachedLowResponse);
             } else {
-                const smartResponse = drSalitas.getSmartResponse(message.content);
+                const smartResponse = drSalitas.getSmartResponse(message.content, context);
                 cache.setPersonalityResponse(cacheKey, smartResponse, 360); // Cache por 6 minutos
                 message.reply(smartResponse);
             }
+            return;
+        }
+    }
+
+    // Sistema de saludos y despedidas espontáneos (nueva funcionalidad)
+    if (drSalitas.isGreeting(messageContent) || drSalitas.isFarewell(messageContent)) {
+        // Probabilidad más alta para saludos y despedidas directos
+        if (Math.random() < 0.35) { // 35% probabilidad para saludos/despedidas
+            const context = {
+                timeOfDay: getTimeOfDay(),
+                isKnownUser: contextualMemory.hasUserHistory(message.author.id),
+                excitement: messageContent.includes('!'),
+                confusion: false
+            };
+            
+            const greetingResponse = drSalitas.getSmartResponse(message.content, context);
+            if (greetingResponse) {
+                message.reply(greetingResponse);
+                return;
+            }
+        }
+    }
+
+    // Sistema de saludos espontáneos sin ser mencionado (probabilidad baja pero presente)
+    if (!message.mentions.has(client.user) && Math.random() < 0.05) { // 5% probabilidad base para espontaneidad
+        const context = {
+            timeOfDay: getTimeOfDay(),
+            isKnownUser: contextualMemory.hasUserHistory(message.author.id),
+            excitement: messageContent.includes('!') || messageContent.includes('genial') || messageContent.includes('bacán'),
+            confusion: messageContent.includes('?') || messageContent.includes('qué') || messageContent.includes('como')
+        };
+
+        // Saludos espontáneos basados en patrones de conversación
+        const spontaneousGreetings = [
+            "¡Ey culiao! Dr.Salitas se mete en la conversa 🎩",
+            "¡Wena hermano! ¿Puedo meterme en esta wea? 👔😄",
+            "¡Hola bastardos! Dr.Salitas aparece de la nada como siempre",
+            "¡Eyyy! El perrito más hijo de puta se suma a la charla",
+            "¡Wena wn! Dr.Salitas detecta movimiento sospechoso 🐕‍🦺",
+            "¡Hola culiaos! ¿Qué están tramando sin mí?",
+            "¡Ey! Dr.Salitas anda weando por aquí también"
+        ];
+
+        // Despedidas espontáneas cuando detecta que alguien se va
+        const spontaneousFarewells = [
+            "¡Chao culiao! Dr.Salitas también se despide 👋",
+            "¡Nos vemos hermano! El perrito elegante dice adiós",
+            "¡Hasta luego bastardos! Dr.Salitas se retira con clase 🎩",
+            "¡Chao wn! Que no te pase nada malo",
+            "¡Adiós! Dr.Salitas vigila desde las sombras 🌙",
+            "¡Nos vidimo culiao! Cuídate el hoyo",
+            "¡Chao hijo de puta! Anda piola"
+        ];
+
+        // Decidir tipo de intervención espontánea
+        let spontaneousResponse = null;
+        
+        if (drSalitas.isGreeting(messageContent)) {
+            spontaneousResponse = spontaneousGreetings[Math.floor(Math.random() * spontaneousGreetings.length)];
+        } else if (drSalitas.isFarewell(messageContent)) {
+            spontaneousResponse = spontaneousFarewells[Math.floor(Math.random() * spontaneousFarewells.length)];
+        } else if (context.excitement) {
+            // Intervención por emoción alta
+            const excitementResponses = [
+                "¡Wena hermano! Dr.Salitas siente la energía culiá 🌟",
+                "¡Ey! ¿Qué chucha está pasando aquí? ¡Me gusta! 🎉",
+                "¡Bacán! Dr.Salitas se suma a la wea 🚀",
+                "¡La cagó! ¿Qué onda la emoción?",
+                "¡Pulento! Dr.Salitas también se prende"
+            ];
+            spontaneousResponse = excitementResponses[Math.floor(Math.random() * excitementResponses.length)];
+        }
+
+        if (spontaneousResponse) {
+            // Delay aleatorio para hacer más natural la intervención
+            setTimeout(() => {
+                message.channel.send(spontaneousResponse);
+            }, 1000 + Math.random() * 3000); // 1-4 segundos de delay
             return;
         }
     }
@@ -1295,6 +1405,7 @@ function setupScheduledMessages() {
     
     // Buenos días culiaos - 8:00 AM (Chile timezone)
     cron.schedule('0 8 * * *', () => {
+        logger.system('Ejecutando job: Buenos días - 8:00 AM Chile');
         if (generalChannel) {
             const morningMessages = [
                 "¡Buenos días culiaos! 🌅 Dr.Salitas ya está despierto y listo pa moquear",
@@ -1305,7 +1416,11 @@ function setupScheduledMessages() {
             ];
             
             const randomMessage = morningMessages[Math.floor(Math.random() * morningMessages.length)];
-            generalChannel.send(randomMessage);
+            generalChannel.send(randomMessage)
+                .then(() => logger.system('Mensaje de buenos días enviado exitosamente'))
+                .catch(error => logger.error('Error enviando mensaje de buenos días:', error));
+        } else {
+            logger.warn('Canal general no disponible para mensaje de buenos días');
         }
     }, {
         timezone: "America/Santiago"
@@ -1313,6 +1428,7 @@ function setupScheduledMessages() {
     
     // Hora del almuerzo - 1:00 PM (13:00 hrs Chile)
     cron.schedule('0 13 * * *', () => {
+        logger.system('Ejecutando job: Almuerzo - 1:00 PM Chile');
         if (generalChannel) {
             const lunchMessages = [
                 "¡Hora del almuerzo culiaos! 🍽️ A comer weas que el Dr.Salitas tiene hambre",
@@ -1323,7 +1439,11 @@ function setupScheduledMessages() {
             ];
             
             const randomMessage = lunchMessages[Math.floor(Math.random() * lunchMessages.length)];
-            generalChannel.send(randomMessage);
+            generalChannel.send(randomMessage)
+                .then(() => logger.system('Mensaje de almuerzo enviado exitosamente'))
+                .catch(error => logger.error('Error enviando mensaje de almuerzo:', error));
+        } else {
+            logger.warn('Canal general no disponible para mensaje de almuerzo');
         }
     }, {
         timezone: "America/Santiago"
@@ -1331,6 +1451,7 @@ function setupScheduledMessages() {
     
     // Mensajes de fin de semana épicos - Viernes 6 PM
     cron.schedule('0 18 * * 5', () => {
+        logger.system('Ejecutando job: Viernes épico - 6:00 PM Chile');
         if (generalChannel) {
             const fridayMessages = [
                 "¡VIERNES CULIAOS! 🎉 Dr.Salitas declara oficialmente abierto el fin de semana épico",
@@ -1341,7 +1462,11 @@ function setupScheduledMessages() {
             ];
             
             const randomMessage = fridayMessages[Math.floor(Math.random() * fridayMessages.length)];
-            generalChannel.send(randomMessage);
+            generalChannel.send(randomMessage)
+                .then(() => logger.system('Mensaje de viernes enviado exitosamente'))
+                .catch(error => logger.error('Error enviando mensaje de viernes:', error));
+        } else {
+            logger.warn('Canal general no disponible para mensaje de viernes');
         }
     }, {
         timezone: "America/Santiago"
@@ -1349,6 +1474,7 @@ function setupScheduledMessages() {
     
     // Domingo por la noche - Preparación para la semana
     cron.schedule('0 20 * * 0', () => {
+        logger.system('Ejecutando job: Domingo preparación - 8:00 PM Chile');
         if (generalChannel) {
             const sundayMessages = [
                 "¡Domingo night culiaos! 🌙 Dr.Salitas se prepara para otra semana épica",
@@ -1359,7 +1485,11 @@ function setupScheduledMessages() {
             ];
             
             const randomMessage = sundayMessages[Math.floor(Math.random() * sundayMessages.length)];
-            generalChannel.send(randomMessage);
+            generalChannel.send(randomMessage)
+                .then(() => logger.system('Mensaje de domingo enviado exitosamente'))
+                .catch(error => logger.error('Error enviando mensaje de domingo:', error));
+        } else {
+            logger.warn('Canal general no disponible para mensaje de domingo');
         }
     }, {
         timezone: "America/Santiago"
@@ -1367,6 +1497,7 @@ function setupScheduledMessages() {
     
     // Mensaje de medianoche épico - Solo fines de semana
     cron.schedule('0 0 * * 6,0', () => {
+        logger.system('Ejecutando job: Medianoche épica - 12:00 AM Weekend Chile');
         if (generalChannel) {
             const midnightMessages = [
                 "¡Medianoche cósmica! 🌌 Dr.Salitas vigila el universo mientras duermen culiaos",
@@ -1377,7 +1508,11 @@ function setupScheduledMessages() {
             ];
             
             const randomMessage = midnightMessages[Math.floor(Math.random() * midnightMessages.length)];
-            generalChannel.send(randomMessage);
+            generalChannel.send(randomMessage)
+                .then(() => logger.system('Mensaje de medianoche enviado exitosamente'))
+                .catch(error => logger.error('Error enviando mensaje de medianoche:', error));
+        } else {
+            logger.warn('Canal general no disponible para mensaje de medianoche');
         }
     }, {
         timezone: "America/Santiago"
@@ -1391,9 +1526,13 @@ setupScheduledMessages();
 function setupPatternCleanup() {
     // Limpiar datos antiguos cada 6 horas
     cron.schedule('0 */6 * * *', () => {
-        logger.system('Ejecutando limpieza del sistema de patrones');
-        patternDetection.cleanup();
-        logger.system('Limpieza de patrones completada');
+        logger.system('Ejecutando job: Limpieza de patrones - cada 6 horas');
+        try {
+            patternDetection.cleanup();
+            logger.system('Limpieza de patrones completada exitosamente');
+        } catch (error) {
+            logger.error('Error en limpieza de patrones:', error);
+        }
     }, {
         timezone: "America/Santiago"
     });
@@ -1408,9 +1547,13 @@ setupPatternCleanup();
 function setupValidationCleanup() {
     // Limpiar rate limits cada 2 horas
     cron.schedule('0 */2 * * *', () => {
-        logger.system('Ejecutando limpieza del sistema de validación');
-        validation.cleanupRateLimits();
-        logger.system('Limpieza de validación completada');
+        logger.system('Ejecutando job: Limpieza de validación - cada 2 horas');
+        try {
+            validation.cleanupRateLimits();
+            logger.system('Limpieza de validación completada exitosamente');
+        } catch (error) {
+            logger.error('Error en limpieza de validación:', error);
+        }
     }, {
         timezone: "America/Santiago"
     });
@@ -1420,3 +1563,58 @@ function setupValidationCleanup() {
 
 // Inicializar limpieza de validación
 setupValidationCleanup();
+
+// Sistema Keep-Alive para Render
+function setupKeepAlive() {
+    // Crear servidor HTTP simple para keep-alive
+    const http = require('http');
+    const port = process.env.PORT || 3000;
+    
+    const server = http.createServer((req, res) => {
+        if (req.url === '/health') {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({
+                status: 'alive',
+                bot: client.user ? client.user.tag : 'connecting',
+                uptime: process.uptime(),
+                timestamp: new Date().toISOString(),
+                timezone: 'America/Santiago',
+                nextJobs: {
+                    morning: '08:00 AM Chile',
+                    lunch: '01:00 PM Chile',
+                    friday: '06:00 PM Friday Chile',
+                    sunday: '08:00 PM Sunday Chile',
+                    midnight: '12:00 AM Weekend Chile'
+                }
+            }));
+        } else if (req.url === '/ping') {
+            res.writeHead(200, { 'Content-Type': 'text/plain' });
+            res.end('pong');
+        } else {
+            res.writeHead(404, { 'Content-Type': 'text/plain' });
+            res.end('Dr.Salitas Bot - Keep Alive Service');
+        }
+    });
+    
+    server.listen(port, () => {
+        logger.system(`Keep-alive server iniciado en puerto ${port}`);
+    });
+    
+    // Auto-ping cada 10 minutos para mantener vivo
+    setInterval(() => {
+        const now = new Date();
+        logger.system(`Keep-alive ping - ${now.toLocaleString('es-CL', { timeZone: 'America/Santiago' })}`);
+        
+        // Verificar que los jobs estén programados
+        const activeJobs = cron.getTasks();
+        logger.system(`Jobs activos: ${activeJobs.size}`);
+        
+    }, 10 * 60 * 1000); // Cada 10 minutos
+    
+    logger.system('Sistema Keep-Alive configurado para Render');
+}
+
+// Solo inicializar keep-alive en producción (Render)
+if (process.env.NODE_ENV === 'production' || process.env.RENDER) {
+    setupKeepAlive();
+}
