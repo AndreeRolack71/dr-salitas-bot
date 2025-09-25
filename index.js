@@ -837,6 +837,7 @@ ${topicList}
                 userId: interaction.user.id,
                 guild: interaction.guild?.name,
                 guildId: interaction.guild?.id,
+                errorMessage: error.message,
                 errorStack: error.stack,
                 timestamp: new Date().toISOString()
             });
@@ -856,6 +857,9 @@ ${topicList}
             } catch (replyError) {
                 logger.error('Error del cliente Discord', replyError, {
                     originalError: error.message,
+                    originalStack: error.stack,
+                    replyErrorMessage: replyError.message,
+                    replyErrorStack: replyError.stack,
                     command: interaction.commandName,
                     user: interaction.user.username
                 });
