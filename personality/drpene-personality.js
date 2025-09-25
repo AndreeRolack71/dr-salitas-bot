@@ -107,16 +107,28 @@ class DrPenePersonality {
         let basePhrases = [];
         if (this.personalityData && this.personalityData.phrases) {
             basePhrases = this.personalityData.phrases;
-        } else {
+        } else if (this.defaultPersonality && this.defaultPersonality.phrases) {
             basePhrases = this.defaultPersonality.phrases;
+        } else {
+            // Fallback si no hay frases disponibles
+            basePhrases = [
+                "¡Ey culiao! Dr.Salitas aquí, más flaite que nunca 🎩😂",
+                "¡Wena conchetumare! Dr.Salitas reportándose pa la weá 👔🐕‍🦺"
+            ];
         }
 
         // Si hay sistema de mood, agregar frases específicas del mood
         if (this.moodSystem) {
-            const currentMood = this.moodSystem.getCurrentMood();
-            const moodPhrases = currentMood.responses.phrases || [];
-            if (moodPhrases.length > 0) {
-                basePhrases = [...basePhrases, ...moodPhrases];
+            try {
+                const moodInfo = this.moodSystem.getMoodInfo();
+                if (moodInfo && moodInfo.responses && moodInfo.responses.phrases) {
+                    const moodPhrases = moodInfo.responses.phrases;
+                    if (moodPhrases.length > 0) {
+                        basePhrases = [...basePhrases, ...moodPhrases];
+                    }
+                }
+            } catch (error) {
+                console.log('Error al obtener mood info para phrases:', error.message);
             }
         }
 
@@ -124,6 +136,12 @@ class DrPenePersonality {
     }
 
     cleanMessage(message) {
+        // Validar que message existe y es string
+        if (!message || typeof message !== 'string') {
+            console.log('Mensaje inválido recibido en cleanMessage:', message);
+            return '';
+        }
+        
         return message.toLowerCase()
             .replace(/[^\w\s]/gi, '')
             .trim();
@@ -150,10 +168,16 @@ class DrPenePersonality {
 
         // Si hay sistema de mood, modificar respuesta
         if (this.moodSystem) {
-            const currentMood = this.moodSystem.getCurrentMood();
-            const moodResponses = currentMood.responses.ping || [];
-            if (moodResponses.length > 0) {
-                baseResponses = [...baseResponses, ...moodResponses];
+            try {
+                const moodInfo = this.moodSystem.getMoodInfo();
+                if (moodInfo && moodInfo.responses && moodInfo.responses.ping) {
+                    const moodResponses = moodInfo.responses.ping;
+                    if (moodResponses.length > 0) {
+                        baseResponses = [...baseResponses, ...moodResponses];
+                    }
+                }
+            } catch (error) {
+                console.log('Error al obtener mood info para ping:', error.message);
             }
         }
 
