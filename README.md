@@ -2,6 +2,8 @@
 
 # 🤖 Dr. Salitas Bot - El Perrito con Terno más Bizarro
 
+</div>
+
 Un bot de Discord avanzado basado en el universo del Dr. Pene, con personalidad única, sistema de memoria contextual, detección de patrones y múltiples mejoras de rendimiento.
 
 ## 🚀 Características Principales
