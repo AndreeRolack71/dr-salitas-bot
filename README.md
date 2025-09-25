@@ -214,7 +214,44 @@ module.exports = {
 
 ## 🌐 Despliegue
 
-### 🚂 Railway (Recomendado)
+### ✅ Render (Recomendado - Gratuito)
+
+**Dr. Salitas está actualmente desplegado y funcionando 24/7 en Render.**
+
+#### Configuración Exitosa:
+1. **Tipo de Servicio**: Background Worker (correcto para bots de Discord)
+2. **Auto-Deploy**: Habilitado desde GitHub
+3. **Variables de Entorno**: Configuradas correctamente
+4. **Estado**: ✅ **FUNCIONANDO**
+
+#### Pasos para replicar:
+```bash
+# 1. Crear Background Worker en Render
+# 2. Conectar repositorio GitHub
+# 3. Configurar variables de entorno:
+DISCORD_TOKEN=tu_token_aqui
+CLIENT_ID=tu_client_id
+NODE_ENV=production
+
+# 4. Configuración del servicio:
+Build Command: npm install
+Start Command: node index.js
+```
+
+#### Ventajas de Render:
+- ✅ **Completamente gratuito**
+- ✅ **750 horas/mes** (suficiente para 24/7)
+- ✅ **Auto-deploy** desde GitHub
+- ✅ **SSL incluido**
+- ✅ **Logs en tiempo real**
+- ⚠️ Se "duerme" tras 15 min de inactividad (se despierta automáticamente)
+
+### Alternativas de Despliegue
+
+<details>
+<summary><strong>Railway</strong></summary>
+
+⚠️ **Nota**: Railway ahora requiere pago mínimo de $5 USD/mes.
 
 1. **Conectar Repositorio**
    ```bash
@@ -232,6 +269,8 @@ module.exports = {
    - Railway detecta el `Procfile` automáticamente
    - Despliegue en menos de 2 minutos
    - SSL y dominio incluidos
+
+</details>
 
 ### 🌐 Otras Plataformas
 
@@ -358,8 +397,35 @@ graph TD
 - **🎯 Event Handler**: Procesa eventos de Discord
 - **🧠 Pattern Engine**: Analiza y detecta patrones
 - **💾 Memory System**: Gestiona memoria conversacional
-- **🎭 Personality Engine**: Maneja estados de ánimo
-- **⚡ Response System**: Genera y envía respuestas
+
+## 📊 Estado del Bot
+
+### 🟢 Estado Actual: ACTIVO
+- **Plataforma**: Render (Background Worker)
+- **Uptime**: 24/7 (con hibernación automática)
+- **Última actualización**: Enero 2025
+- **Versión**: 1.0.0
+
+### ✅ Funcionalidades Verificadas
+- ✅ Comandos slash (`/ping`, `/frase`, `/chiste`)
+- ✅ Respuestas automáticas a menciones
+- ✅ Sistema de estados de ánimo
+- ✅ Detección de patrones
+- ✅ Memoria contextual
+- ✅ Auto-deploy desde GitHub
+
+### 🔧 Correcciones Recientes
+- **Enero 2025**: Corregidos errores críticos en `drpene-personality.js`
+  - Validación de propiedades undefined
+  - Manejo robusto del sistema de estados de ánimo
+  - Validación de entrada en métodos críticos
+  - Fallbacks para respuestas por defecto
+
+---
+
+<div align="center">
+  <strong>🎉 Dr. Salitas está listo para hacer reír a tu servidor de Discord 🎉</strong>
+</div>
 
 ## 🤝 Contribuir
 
