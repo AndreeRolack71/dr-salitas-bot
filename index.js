@@ -522,7 +522,7 @@ client.on('interactionCreate', async (interaction) => {
             });
             await interaction.reply({
                 content: '❌ **Error de validación:** El comando contiene datos no válidos.',
-                ephemeral: true
+                flags: 64 // MessageFlags.Ephemeral
             });
             return;
         }
@@ -537,7 +537,7 @@ client.on('interactionCreate', async (interaction) => {
             });
             await interaction.reply({
                 content: `⏰ **Límite de velocidad:** ${rateLimitResult.reason}. Intenta de nuevo más tarde.`,
-                ephemeral: true
+                flags: 64 // MessageFlags.Ephemeral
             });
             return;
         }
@@ -732,7 +732,7 @@ ${Object.entries(loreData.relationships).map(([char, rel]) => `• **${char}**: 
                         });
                         await interaction.reply({
                             content: '❌ Error al crear la batalla. Intenta de nuevo.',
-                            ephemeral: true
+                            flags: 64 // MessageFlags.Ephemeral
                         });
                     }
                     break;
@@ -846,7 +846,7 @@ ${topicList}
                 if (!interaction.replied && !interaction.deferred) {
                     await interaction.reply({
                         content: '¡Ey wea! ¡Algo salió mal pero sigo siendo elegante! 🐕‍🦺👔\n*Error interno del sistema*',
-                        ephemeral: true
+                        flags: 64 // MessageFlags.Ephemeral
                     });
                 } else if (interaction.deferred) {
                     await interaction.editReply({
